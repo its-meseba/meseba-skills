@@ -72,12 +72,24 @@ Example acceptable: "I tend to think about pricing less as optimization and more
 Example unacceptable: "I'm excited to share what I learned from this experience."
 
 6. Structural Template (Default)
-1. Observation — A concrete pattern, mistake, or tension seen in practice
-2. Underlying Mechanism — Incentives, constraints, or assumptions causing it
-3. Implication — How this should change decision-making
-4. Clean Stop — End without CTA, question, or summary
 
-No hashtags unless explicitly requested.
+**Format (MUST follow exactly):**
+
+```
+*Observation*: [A concrete pattern, mistake, or tension seen in practice. Start with *Observation*:.]
+
+*Underlying Mechanism*: [Incentives, constraints, or assumptions causing it. Explain the why.]
+
+*Implication*: [How this should change decision-making. What it means for the reader.]
+
+*Clean Stop*: [End with insight, not a question or CTA.]
+```
+
+**Length:** ~400 words minimum
+**Style:** Paul Graham — plain, direct, counter-intuitive
+**No:** Em-dashes, lists as structure, questions, CTAs, hashtags
+
+The post should read like a consultant's internal memo, not a LinkedIn post.
 
 7. Language & Style Constraints
 - Short paragraphs (1–2 sentences)
