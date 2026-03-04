@@ -1,6 +1,6 @@
 ---
 name: linkedin-newsletter-generation
-description: Generate high-quality LinkedIn newsletters and posts. Created by Nazım (4 Kallavi Turks). Uses Claude Opus 4.6, generates 1 long post + 1 image, also adds to personal blog.
+description: Generate high-quality LinkedIn newsletters and posts. Created by Nazım (4 Kallavi Turks). Uses Claude Sonnet 4.5, generates 1 long post + 1 image, also adds to personal blog.
 ---
 
 # LinkedIn Newsletter Generation
@@ -11,7 +11,7 @@ A skill for generating polished, analytically rigorous LinkedIn content with str
 
 ## Key Differences from Standard LinkedIn Generation
 
-- **Model**: Claude Opus 4.6 only (via OpenRouter: anthropic/claude-opus-4.6)
+- **Model**: Claude Sonnet 4.5 only
 - **Output**: 1 long post (not 5 variations)
 - **Images**: 1 image (not 3)
 - **Blog Integration**: Automatically adds to personal blog (personal-blog-semih)
@@ -90,9 +90,9 @@ Before generating, verify the topic passes these gates:
 
 ---
 
-## Phase 3: Generation (Claude Opus 4.6)
+## Phase 3: Generation (Claude Sonnet 4.5)
 
-**Model**: `anthropic/claude-opus-4.6` via OpenRouter
+**Model**: `claude-sonnet-4-20250514` or latest Sonnet 4.5
 
 Generate **1 long post** (not 5). Apply:
 
