@@ -1,0 +1,23 @@
+{
+  "skill_name": "daily-brain",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I just learned that when building a feature, I should always ask: what action will the user take after using this? If no clear action, the feature probably isn't providing real value.",
+      "expected_output": "Appends a timestamped Learning entry to today's daily note in Daily Tracking/03-2026/Week 1/Daily/2026-03-04.md",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Had a meeting with the JoyoLabs team, decided to switch the chatbot to streaming responses. Blocked on the API rate limits though — need to talk to infra about it tomorrow.",
+      "expected_output": "Appends a timestamped Work Note entry to today's daily note, capturing the decision and blocker",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Set my goals for the week: finish the agent MPC demo project, read 2 chapters of context engineering, and post one LinkedIn update about agentic frameworks",
+      "expected_output": "Creates or updates Goals.md in the current week folder with the three goals as checklist items",
+      "files": []
+    }
+  ]
+}
