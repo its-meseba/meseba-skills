@@ -214,7 +214,28 @@ When the user mentions a goal or learning that doesn't map to any existing field
 - AI Engineering → `Work/Mine/MiniDecade/AI Engineering/`
 - Context Engineering → `Work/Mine/MiniDecade/Context Engineering/`
 - Backend Engineering → `Work/Mine/MiniDecade/Backend Engineering/`
-- (more will be created as the user develops them)
+- SaaS Product → `Work/Mine/MiniDecade/SaaS Product/`
+- Entrepreneurship → `Work/Mine/MiniDecade/Entrepreneurship/`
+- Languages → `Work/Mine/MiniDecade/Languages/`
+- Personal Growth → `Work/Mine/MiniDecade/Personal Growth/`
+- (more created via `/mini-decade:new-field`)
+
+## Commands
+
+These sub-commands can be invoked explicitly:
+
+| Command | Purpose |
+|---------|---------|
+| `/daily-brain:log` | Quick structured entry (auto-categorizes, timestamps, tags field) |
+| `/daily-brain:goals` | Set/review weekly goals mapped to MiniDecade fields |
+| `/daily-brain:review` | Weekly or monthly summary of entries |
+| `/daily-brain:morning` | Morning kickoff: today's agenda from goals + plan state + habits |
+
+Cross-references:
+- `/daily-brain:goals` → reads MiniDecade Plan.md files for field-level goal mapping
+- `/daily-brain:morning` → reads MiniDecade plan state + HabitAdd habits for daily briefing
+- `/daily-brain:review` → connects to `/mini-decade:review` for formal weekly reviews
+- `/mini-decade:review` → reads daily-brain entries tagged with `[Field Name]`
 
 ## Reviewing and Querying
 

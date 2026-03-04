@@ -31,11 +31,15 @@ Work/Mine/MiniDecade/
 
 ### Existing Fields (vault paths)
 
-- AI Engineering -> `Work/Mine/MiniDecade/AI Engineering/`
-- Context Engineering -> `Work/Mine/MiniDecade/Context Engineering/`
-- Backend Engineering -> `Work/Mine/MiniDecade/Backend Engineering/`
+- AI Engineering → `Work/Mine/MiniDecade/AI Engineering/`
+- Context Engineering → `Work/Mine/MiniDecade/Context Engineering/`
+- Backend Engineering → `Work/Mine/MiniDecade/Backend Engineering/`
+- SaaS Product → `Work/Mine/MiniDecade/SaaS Product/`
+- Entrepreneurship → `Work/Mine/MiniDecade/Entrepreneurship/`
+- Languages → `Work/Mine/MiniDecade/Languages/`
+- Personal Growth → `Work/Mine/MiniDecade/Personal Growth/`
 
-New fields are created as the user develops them.
+New fields are created as the user develops them (use `/mini-decade:new-field`).
 
 ## Plan.md Template
 
@@ -301,6 +305,26 @@ If `obsidian-cli` fails for nested paths, fall back to direct file operations:
 mkdir -p "/Users/mehmetsemihbabacan/dev/brain/Work/Mine/MiniDecade/[Field Name]/Resources"
 ```
 Then write/append to `.md` files directly.
+
+## Commands
+
+These sub-commands can be invoked explicitly for specific operations:
+
+| Command | Purpose |
+|---------|---------|
+| `/mini-decade:new-field` | Create a new mastery field (interview → structure → plan → resources → goals) |
+| `/mini-decade:plan` | Write or update a field's quarterly plan |
+| `/mini-decade:review` | Weekly or quarterly review (auto-detects based on date) |
+| `/mini-decade:research` | Find and save resources for a field |
+| `/mini-decade:progress` | Cross-field dashboard + "what should I work on?" suggestions |
+| `/mini-decade:habits` | Sync HabitAdd data, create habits from plan, pull analytics |
+
+Cross-references:
+- `/mini-decade:new-field` → ends with `/daily-brain:goals` to set weekly goals
+- `/mini-decade:review` → reads daily-brain entries tagged with `[Field Name]`
+- `/mini-decade:habits` → uses HabitAdd API reference at `references/habitadd-api.md`
+- `/daily-brain:morning` → reads MiniDecade plan state for daily briefing
+- `/daily-brain:goals` → reads Plan.md files for field-level goal mapping
 
 ## Important Behaviors
 
