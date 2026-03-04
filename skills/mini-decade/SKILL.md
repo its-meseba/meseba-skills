@@ -666,6 +666,62 @@ curl -s -X POST "https://us-central1-habits-x.cloudfunctions.net/agentCreateHabi
 
 ---
 
+## Resource Knowledge System
+
+Fields can have large resources (textbooks, courses) ingested into a semantic search database for the Teacher to query.
+
+### Architecture
+
+```
+[Field Name]/
+  Resources/
+    [Resource Name].md              # Metadata card
+    [Resource Name]/                # Extracted content
+      00-front-matter.md
+      01-lesson-1.md ... NN-lesson-NN.md
+  Tools/knowledge/                  # ChromaDB vector store (per field)
+```
+
+### Scripts
+
+Located at `Work/Mine/MiniDecade/0. What is MiniDecade/Tools/scripts/`:
+
+**Ingest a resource:**
+```bash
+python3 ingest-resource.py "<epub_path>" \
+  --field "Polyglot[Russian]" \
+  --resource "The New Penguin Russian Course" \
+  --langs "eng+rus"
+```
+Pipeline: EPUB → extract images → OCR (Tesseract) → detect lesson boundaries → save per-lesson markdown → chunk (1500 chars, 200 overlap) → embed (all-MiniLM-L6-v2) → store in ChromaDB.
+
+**Query the knowledge base:**
+```bash
+python3 query-resource.py "accusative case rules" \
+  --field "Polyglot[Russian]" \
+  --top 5 \
+  --lesson 12 \
+  --resource "The New Penguin Russian Course" \
+  --format text
+```
+Returns relevant passages with source citations (resource, lesson, page range).
+
+### When to Use
+
+- **`/mini-decade:plan-week`** — query for this week's topic to pull relevant textbook passages into daily plans
+- **`/mini-decade:today`** — query on user request ("what does the book say about X?")
+- **`/mini-decade:research`** — deep search across all ingested resources
+- **Teacher context** — when the Teacher references specific lessons or concepts, ground them in actual resource content
+
+### Query from Python (for sub-agents)
+
+```bash
+python3 "/Users/mehmetsemihbabacan/dev/brain/Work/Mine/MiniDecade/0. What is MiniDecade/Tools/scripts/query-resource.py" \
+  "query text" --field "Field Name" --top 3 --format json
+```
+
+---
+
 ## Connecting with Daily Brain
 
 The daily-brain skill handles daily logging. MiniDecade connects to it:
