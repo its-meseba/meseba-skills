@@ -61,7 +61,33 @@ Input: $ARGUMENTS (if empty, ask "What topic do you need to explain? Share a Lin
 - [ISSUE-ID] Issue title — [one-line relevance]
 ```
 
-4. **Present everything** to the user. The goal is that after reading this, they can walk into the room and lead the conversation from the macro down — never getting lost in details unless asked.
+4. **Present everything** to the user in the conversation.
+
+5. **Generate an HTML briefing page** and save it to `/tmp/brief-<ISSUE-ID>.html` (e.g., `/tmp/brief-JOY-1510.html`). Then open it with `open /tmp/brief-<ISSUE-ID>.html`.
+
+   The HTML must be a single self-contained file — no external dependencies. Design it as a polished, readable briefing document:
+
+   **Visual Design Requirements:**
+   - **Light theme** with a clean white/off-white background (`#FAFAFA` or similar)
+   - **High contrast** — dark text (`#1A1A1A`) on light backgrounds, never gray-on-gray
+   - **System font stack** — `-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
+   - **Comfortable reading width** — max `720px`, centered, with generous padding
+   - **Clear visual hierarchy** — the 3-point summary should be the dominant element, scannable in 5 seconds
+
+   **Structure:**
+   - **Header:** Issue ID as a subtle label, issue title as the main heading
+   - **Executive Summary section:** The 3 points (Problem, Solution, Impact) in a visually distinct card or panel with a subtle left border accent (use a calm blue like `#2563EB`)
+   - **Context section:** If present, below the summary in a lighter, secondary style
+   - **Talking Flow section:** Each talking point as its own card/block — the trigger question (`"If they ask..."`) as a bold label, the answer below. Use subtle background differentiation between cards
+   - **Related Work section:** Clean list with issue IDs as monospace badges
+
+   **Typography:**
+   - Title: `1.75rem`, bold, `#1A1A1A`
+   - Section headers: `1.1rem`, semibold, `#374151`
+   - Body text: `1rem`, `#1A1A1A`, line-height `1.7`
+   - Labels/badges: `0.8rem`, uppercase, letter-spaced, `#6B7280`
+
+   **Key principle:** This is a document someone glances at on their phone before walking into a meeting. Every section should be instantly scannable. Use whitespace generously — breathing room between sections. No clutter.
 
 ## Principles
 
