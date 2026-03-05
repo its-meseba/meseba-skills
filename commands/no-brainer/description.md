@@ -16,6 +16,7 @@ Input: $ARGUMENTS (if empty, ask "Which issue? Paste the content or share the Li
    - Raw text/content → use it directly for summarization
    - A Linear issue ID or URL → fetch the issue via Linear MCP tools first
    - Also fetch issue comments/activity for additional context
+   - **Analyze images from comments:** When image URLs are present (markdown `![...](<url>)` format), use `WebFetch` on each URL immediately (signed URLs expire in ~5 min) — then `Read` the downloaded file path to visually analyze charts/screenshots and extract data points for the summary
 
 2. **Read the input carefully.** Understand the full picture before summarizing.
 

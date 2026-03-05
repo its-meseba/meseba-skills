@@ -15,8 +15,16 @@ Input: $ARGUMENTS (if empty, ask "What topic do you need to explain? Share a Lin
 1. **Gather context from Linear.** This is what makes brief different from summary — it pulls in the bigger picture:
    - Fetch the main issue via Linear MCP (`get_issue` with `includeRelations: true`)
    - Fetch comments/activity on the issue (`list_comments`) — these often contain the real decisions and data
-   - List open issues in the same project or cycle (`list_issues`) — read titles to understand what else is in flight
-   - For blocking/related issues: fetch their details too (title + description) to understand dependencies
+   - **Analyze images from comments:** Comments often contain charts, screenshots, and data visualizations. When image URLs are present in comments (markdown `![...](<url>)` format):
+     1. Use `WebFetch` on each image URL immediately (signed URLs expire in ~5 minutes) — this downloads to a local temp file
+     2. Use `Read` on the downloaded file path (returned in the WebFetch output) to visually analyze the image
+     3. Extract key data points, trends, and insights from charts/graphs to strengthen the summary with real numbers
+     4. **Fetch all images in parallel** — call `WebFetch` on all image URLs in the same turn to beat URL expiration
+   - **Parallel subagents for multi-issue context:** When there are blocking/related issues or multiple issues to analyze:
+     - Spawn an **"issue-context-gatherer"** subagent per related issue — each reads the issue, its comments, and downloads/analyzes any images
+     - Spawn an **"image-analyzer"** subagent when there are 3+ images to process — it fetches all URLs via WebFetch, reads the downloaded files, and returns a summary of visual insights
+     - Spawn a **"cycle-scanner"** subagent to list open issues in the same project/cycle and return titles + status for the "related work in flight" section
+     - Run all subagents in parallel to minimize wait time
    - Only go deep (full description + comments) on issues that are directly relevant to the narrative
 
 2. **Build the executive summary** using the standard no-brainer format:
