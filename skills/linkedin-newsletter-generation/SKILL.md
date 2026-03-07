@@ -172,3 +172,63 @@ Generate a LinkedIn newsletter about [TOPIC] in Paul Graham style.
 ```
 Create a long-form LinkedIn post about [TOPIC] about capital allocation under scarcity.
 ```
+
+---
+
+## Publishing to LinkedIn
+
+After generating, use the HTML Editor to format for LinkedIn:
+
+**URL:** `http://bore.pub:50223/posts/newsletter-editor.html`
+
+Features:
+- Markdown editor with live preview
+- "Copy for LinkedIn" button
+- "Load Sample" with example
+
+**Workflow:**
+1. Generate newsletter content
+2. Paste into the HTML editor
+3. Edit/preview
+4. Copy for LinkedIn
+5. Paste to LinkedIn
+
+---
+
+## Example Output
+
+**Latest generated newsletter: "The Identity Crisis of AI Agents" (March 6, 2026)**
+
+Sample structure:
+
+```
+# The Observation
+
+Most companies right now are worried about the wrong AI problem.
+
+They're debating prompt engineering techniques, model selection, fine-tuning strategies. Meanwhile, something much more fundamental is broken, and almost nobody is talking about it.
+
+Every AI agent accessing your systems today is, for all practical purposes, an unmanaged employee. No badge. No audit trail. No boundaries.
+
+---
+
+## The Underlying Mechanism
+
+The reason this is happening is architectural. Our entire identity infrastructure was built for two types of principals: humans and services. AI agents are neither.
+
+An agent isn't a human. It doesn't respond to MFA prompts. But it's also not a traditional service. It's autonomous.
+
+---
+
+## The Implication
+
+Here's the thing that should make every product and engineering leader uncomfortable: the agent deployment problem is going to get worse by an order of magnitude before anyone's governance catches up.
+
+---
+
+## The Clean Stop
+
+The agentic era doesn't need better models. It needs better infrastructure. Agent identity is the unsexy, foundational layer that determines whether enterprise AI deployment is a transformation or a catastrophe.
+```
+
+Format: *Observation* → *Underlying Mechanism* → *Implication* → *Clean Stop*
