@@ -67,6 +67,16 @@ Input: $ARGUMENTS (if empty, ask "What topic do you need to explain? Share a Lin
 
    The HTML must be a single self-contained file — no external dependencies. Design it as a polished, readable briefing document:
 
+   **Language Tabs (Multi-language Support):**
+   - **By default**, generate content in **both English and Turkish**
+   - If the user specifies additional languages, add those as extra tabs
+   - At the top of the page, render a **tab bar** with one tab per language (e.g., `English | Türkçe`)
+   - The **English tab is shown by default** (active state)
+   - Clicking a tab switches all content below to that language — use inline JavaScript to toggle visibility (`display: none/block`) on language-specific `<div>` containers
+   - **Never translate domain terminology** (e.g., "churn", "ROAS", "cohort", "onboarding", "win-back", "A/B test", "CTR", "CTA", "funnel") — keep these in English across all languages unless the user explicitly asks to translate them
+   - Each language tab contains the **full briefing** (Executive Summary + Talking Flow + Related Work) translated naturally — not word-for-word machine translation
+   - Tab styling: pill-shaped buttons, active tab gets the accent color (`#2563EB`) with white text, inactive tabs get a light gray background (`#F3F4F6`) with dark text, smooth transition on hover
+
    **Visual Design Requirements:**
    - **Light theme** with a clean white/off-white background (`#FAFAFA` or similar)
    - **High contrast** — dark text (`#1A1A1A`) on light backgrounds, never gray-on-gray
@@ -75,11 +85,12 @@ Input: $ARGUMENTS (if empty, ask "What topic do you need to explain? Share a Lin
    - **Clear visual hierarchy** — the 3-point summary should be the dominant element, scannable in 5 seconds
 
    **Structure:**
-   - **Header:** Issue ID as a subtle label, issue title as the main heading
+   - **Header:** Issue ID as a subtle label, issue title as the main heading (header stays outside language tabs — it's the same in all languages)
+   - **Language tab bar:** Immediately below the header
    - **Executive Summary section:** The 3 points (Problem, Solution, Impact) in a visually distinct card or panel with a subtle left border accent (use a calm blue like `#2563EB`)
    - **Context section:** If present, below the summary in a lighter, secondary style
    - **Talking Flow section:** Each talking point as its own card/block — the trigger question (`"If they ask..."`) as a bold label, the answer below. Use subtle background differentiation between cards
-   - **Related Work section:** Clean list with issue IDs as monospace badges
+   - **Related Work section:** Clean list with issue IDs as monospace badges that link to the Linear issue URL (e.g., `<a class="issue-badge" href="https://linear.app/WORKSPACE/issue/ISSUE-ID" target="_blank">ISSUE-ID</a>`). Add hover style (darker background) to signal interactivity.
 
    **Typography:**
    - Title: `1.75rem`, bold, `#1A1A1A`
