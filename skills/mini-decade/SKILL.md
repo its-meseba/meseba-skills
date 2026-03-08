@@ -776,6 +776,7 @@ Then write/append to `.md` files directly.
 | `/mini-decade:research` | Deep research for a field (spawns sub-agents) |
 | `/mini-decade:progress` | Cross-field dashboard + "what should I work on?" suggestions |
 | `/mini-decade:habits` | Sync HabitAdd data, create habits from plan, pull analytics |
+| `/mini-decade:help` | Show help — what MiniDecade is and how to use it |
 
 Cross-references:
 - `/mini-decade:new-field` → ends with `/mini-decade:plan-week` to generate first week
@@ -804,3 +805,71 @@ Cross-references:
 - **HabitAdd is optional** — always check `config.json` before making API calls
 - **Preserve the user's voice** — plans should sound human, not corporate
 - **Daily files are disposable** — they're tactical; Plan.md is strategic and precious
+
+## Help (`/mini-decade:help`)
+
+When this sub-command is invoked, present the following to the user:
+
+---
+
+### MiniDecade — 3-Year Mastery System
+
+A 156-week (3-year) mastery framework in your Obsidian vault. Each field you're learning gets its own plan, Teacher AI persona, progress tracking, and weekly cadence.
+
+#### The Weekly Cadence
+
+| Day | Role |
+|-----|------|
+| **Monday** | Plan — organize the week, lighter study |
+| **Tue-Thu** | Build — core study sessions, heaviest material |
+| **Friday** | Ship — produce an artifact (recording, writing, exercise set) |
+| **Sat-Sun** | Reflect — review week, lighter practice, rest |
+
+#### Key Concepts
+
+- **Fields** — Areas of mastery (e.g., AI Engineering, Polyglot[Russian], Backend Engineering)
+- **Teacher** — Each field has an AI persona (`soul.md`) that plans, evaluates, motivates, and adapts
+- **Bricks** — Weekly shipped artifacts that prove progress
+- **Plan.md** — The living strategic document (3-year arc, quarterly goals, weekly summaries)
+- **HabitAdd** — Optional habit tracking integration for daily consistency
+
+#### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `/mini-decade` | Dashboard — list all fields, status, and what to work on |
+| `/mini-decade:new-field` | Create a new mastery field (interview, deep research, plan, Teacher creation) |
+| `/mini-decade:plan-week` | Monday planning — generate weekly overview + 7 daily files with Teacher intro |
+| `/mini-decade:today` | Daily check-in — show today's plan, Teacher comments, allow adjustments |
+| `/mini-decade:plan` | Write or update a field's quarterly plan |
+| `/mini-decade:review` | Weekly, monthly, or quarterly review (auto-detects based on context) |
+| `/mini-decade:research` | Deep research for a field (spawns parallel sub-agents) |
+| `/mini-decade:progress` | Cross-field dashboard + "what should I work on?" suggestions |
+| `/mini-decade:habits` | Sync HabitAdd data — create habits from plan, log completions, pull analytics |
+| `/mini-decade:soul` | Enter a persistent Teacher session for a field |
+| `/mini-decade:help` | Show this help |
+
+#### Vault Structure
+
+```
+MiniDecade/
+  [Field Name]/
+    0. Plan.md        # Strategic plan (3-year arc, quarterly goals)
+    soul.md           # Teacher AI persona
+    config.json       # Settings (daily minutes, habit IDs, level)
+    Plans/            # Weekly overviews + daily detail files
+    Progress/         # Weekly/monthly/quarterly reviews
+    Resources/        # Books, courses, articles
+    Artifacts/        # Shipped work links
+```
+
+#### Daily Brain Connection
+
+MiniDecade connects to the daily-brain skill:
+- Entries tagged with `[Field Name]` feed into progress tracking
+- Weekly goals populate `Goals.md` in the daily-brain folder
+- `/mini-decade:today` pushes a summary to today's daily note
+
+#### Getting Started
+
+Say "I want to start learning X" or `/mini-decade:new-field` to create your first field. The skill will interview you, run deep research, create a Teacher, and generate your first week's plan.

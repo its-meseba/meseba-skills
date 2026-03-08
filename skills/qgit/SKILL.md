@@ -48,6 +48,49 @@ If there's no upstream, use `git push -u origin <branch>`.
 
 One line: the commit hash, branch, and what was pushed. Done.
 
+## Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/qgit` | Stage, commit, and push in one shot |
+| `/qgit:help` | Show help — what qgit does and how to use it |
+
+## Help (`/qgit:help`)
+
+When this sub-command is invoked, present the following to the user:
+
+---
+
+### qgit — Quick Git Ship
+
+Stage, commit, and push in one fluid motion. One command, minimal output.
+
+#### What it does
+
+1. **Gathers context** — runs `git status`, `git diff --stat`, and `git log --oneline -5` in parallel
+2. **Stages files** — adds changed and relevant untracked files by name (never `git add .`)
+3. **Commits** — writes a concise commit message matching the repo's existing style, with co-author attribution
+4. **Pushes** — pushes to remote (sets upstream if needed)
+5. **Reports** — one line: commit hash, branch, what was pushed
+
+#### Usage
+
+```
+/qgit
+```
+
+That's it. No arguments needed. Just say `/qgit`, "commit and push", "ship it", or "push this".
+
+#### Safety rules
+
+- Never amends — always creates new commits
+- Never force pushes
+- Never skips hooks (`--no-verify`)
+- Skips files that look like secrets (`.env`, credentials)
+- If push fails due to remote changes: informs you instead of auto-rebasing
+
+---
+
 ## Rules
 
 - Never amend unless explicitly asked — always create new commits

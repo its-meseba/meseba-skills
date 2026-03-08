@@ -67,6 +67,47 @@ State what changes — in measurable or observable terms. One sentence.
 | `/no-brainer:summary` | Just present the executive summary — no Linear updates |
 | `/no-brainer:description` | Generate summary + update Linear issue description |
 | `/no-brainer:brief` | Full executive communication prep — reads Linear context, gives talking points |
+| `/no-brainer:help` | Show help — what No-Brainer does and how to use it |
+
+## Help (`/no-brainer:help`)
+
+When this sub-command is invoked, present the following to the user:
+
+---
+
+### No-Brainer
+
+Distills any input into a 3-point executive summary: **Problem, Solution, Impact** — plus optional Context. Feed it a wall of text, get back the core takeaway.
+
+#### The Format
+
+Every summary follows this structure:
+
+```
+1. Problem:   [One sentence — what's broken or missing]
+2. Solution:  [One sentence — the approach or path forward]
+3. Impact:    [One sentence — what changes when this is done]
+
+Context: [One paragraph max — links, prior decisions, constraints. Optional.]
+```
+
+#### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `/no-brainer` or `/no-brainer:summary` | Present the executive summary only |
+| `/no-brainer:description` | Generate summary + update a Linear issue description with it |
+| `/no-brainer:brief` | Full executive communication prep — reads Linear context, gives talking points for presenting to leadership |
+
+#### When to use
+
+Say "summarize this", "tldr", "break this down", "executive summary", or just paste a wall of text. Works on meeting recaps, Slack threads, Linear issues, technical writeups — anything verbose that needs the core point extracted.
+
+#### What it's NOT
+
+- Not a detailed analysis tool — it distills, not expands
+- Not a project plan — it clarifies "what" and "why", not "how in 47 steps"
+- Not a meeting notes formatter — it extracts the core point, not a chronological recap
 
 ## What This Skill is NOT
 

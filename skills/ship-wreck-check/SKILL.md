@@ -174,3 +174,58 @@ Before declaring "ship it", answer honestly:
 3. Did you actually READ every line of your diff, or did you skim?
 4. Did you run every quality command the project defines?
 5. Did you check what the project's CLAUDE.md or README says to run before committing?
+
+## Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/ship-wreck-check` | Run the full quality review on your changes |
+| `/ship-wreck-check:help` | Show help — what Ship-Wreck Check does and how to use it |
+
+## Help (`/ship-wreck-check:help`)
+
+When this sub-command is invoked, present the following to the user:
+
+---
+
+### Ship-Wreck Check
+
+A brutal, honest quality review of your code changes — the kind a senior engineer would give a junior's PR. Catches wrecks before they ship.
+
+#### The 7-Step Process
+
+| Step | What happens |
+|------|-------------|
+| 1. **Gather changes** | Finds all changed files (uncommitted, unpushed, and branch diff) |
+| 2. **Discover quality commands** | Scans package.json, CLAUDE.md, Makefile, CI config for lint/build/test commands |
+| 3. **Run all quality commands** | Executes every discovered command — build, lint, typecheck, tests |
+| 4. **Deep review** | Reads every changed file + related files, checks for production safety, code quality, structure |
+| 5. **Code simplifier** | Invokes the code-simplifier agent for a second pair of eyes |
+| 6. **Report findings** | Reports issues with exact `file:line` references and severity levels |
+| 7. **Fix and re-verify** | Fixes issues and re-runs from step 3 until clean |
+
+#### Severity Levels
+
+| Level | Meaning |
+|-------|---------|
+| **BLOCKER** | Will break production. Must fix before shipping. |
+| **WARNING** | Code smell or convention violation. Should fix. |
+| **SUGGESTION** | Could be better but not harmful. Nice to have. |
+
+#### Usage
+
+```
+/ship-wreck-check
+```
+
+Also triggers on: "review this", "is this ready", "final check", "check my work", "quality check", "are we good".
+
+#### What it checks
+
+- **Production safety** — broken callers, error handling, edge cases, resource cleanup, environment differences
+- **Code quality** — duplications, god files, separation of concerns, dead code, magic values, naming
+- **File structure** — new files in the right place, consistent patterns, file size
+
+#### When to use
+
+After completing a feature, bugfix, or refactor — before committing or creating PRs. Run it whenever implementation work is complete and needs honest self-assessment.

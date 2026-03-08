@@ -230,6 +230,7 @@ These sub-commands can be invoked explicitly:
 | `/daily-brain:goals` | Set/review weekly goals mapped to MiniDecade fields |
 | `/daily-brain:review` | Weekly or monthly summary of entries |
 | `/daily-brain:morning` | Morning kickoff: today's agenda from goals + plan state + habits |
+| `/daily-brain:help` | Show help — what Daily Brain does and how to use it |
 
 Cross-references:
 - `/daily-brain:goals` → reads MiniDecade Plan.md files for field-level goal mapping
@@ -268,3 +269,47 @@ obsidian-cli open "note name"
 - Preserve the user's language and tone — add structure, not corporate speak
 - When in doubt about category, log it under the closest match and mention it to the user
 - Keep confirmations short: "Logged under 📚 Learnings in today's note (03-04, Week 1)"
+
+## Help (`/daily-brain:help`)
+
+When this sub-command is invoked, present the following to the user:
+
+---
+
+### Daily Brain — Obsidian Second Brain Logger
+
+A structured daily logging system that captures your thoughts, learnings, and experiences into your Obsidian vault at `~/dev/brain/`.
+
+#### How it works
+
+When you share something — a learning, feedback, discovery, failure, idea, goal, or work note — it gets logged to the correct daily file with an `HH:MM` timestamp. Files are organized in `Daily Tracking/MM-YYYY/Week N/Daily/YYYY-MM-DD.md`.
+
+#### Categories
+
+| Say something like... | Gets logged under |
+|----------------------|-------------------|
+| "I learned that...", "TIL...", "interesting, so..." | Learnings |
+| "Got feedback that...", "X told me..." | Feedback |
+| "Found out that...", "discovered..." | Discoveries |
+| "Failed at...", "didn't work..." | Failures |
+| "What if we...", "idea:", "I should try..." | Ideas |
+| "Today I need to...", "goals for today..." | Goals |
+| "In the meeting...", "decided to...", "blocked on..." | Work Notes |
+
+#### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `/daily-brain` or `/daily-brain:log` | Quick structured entry — auto-categorizes, timestamps, tags MiniDecade field |
+| `/daily-brain:goals` | Set or review weekly goals mapped to MiniDecade fields |
+| `/daily-brain:morning` | Morning kickoff — today's agenda from goals, plan state, and habits |
+| `/daily-brain:review` | Weekly or monthly summary of entries |
+| `/daily-brain:help` | Show this help |
+
+#### MiniDecade Connection
+
+Entries are tagged with MiniDecade field names (e.g., `[AI Engineering]`) for cross-referencing. Weekly goals live in `Goals.md` and map to MiniDecade fields.
+
+#### Usage
+
+Just speak naturally. Say "I learned that prompt caching reduces latency by 80%" or "log this: meeting with X decided to go with approach Y". The skill handles categorizing, timestamping, and filing.
