@@ -46,16 +46,26 @@ If there's no upstream, use `git push -u origin <branch>`.
 
 ### 5. Update Linear issues (optional)
 
-If the user provided Linear issue IDs/URLs (e.g., `/qgit JOY-1534` or `/qgit JOY-1534 JOY-1535`):
+If the user provided Linear issue IDs or URLs alongside `/qgit`, post activity comments automatically.
 
-1. Analyze the commits being pushed — understand what was done from diffs and commit messages
-2. Generate a **walk-me-through** activity log following the `/no-brainer:walk-me-through` format:
-   - Break the work into logical steps (3-8 steps)
-   - Each step: `### n/total — [Plain-language meaning]` + `**Technical Context:** [files, implementation details]`
-3. Show the walk-me-through to the user for confirmation
-4. Post as a comment on each provided Linear issue using `save_comment`
+**Accepted formats:**
+- Issue IDs: `JOY-1534`, `JOY-1535`
+- Full URLs: `https://linear.app/joyolabs/issue/JOY-1534/add-thumbs-up-down-reasons-table`
+- Mixed: `JOY-1534 https://linear.app/.../JOY-1535/...`
 
-This is **not the default** — only triggered when issue IDs are explicitly provided.
+**URL parsing:** Extract the issue identifier (e.g., `JOY-1534`) from the URL path segment after `/issue/`.
+
+**Process:**
+1. For each issue, use `get_issue` (search by identifier like `JOY-1534`) to get the issue ID
+2. Analyze the commits being pushed — understand what was done from diffs and commit messages
+3. Generate an **implementation summary** comment for each issue:
+   - `## Implementation Complete ✅` header
+   - `### What was done` — bullet list of changes relevant to that issue
+   - `### Key files` — list of changed files with brief descriptions
+   - `### Branch` — branch name and commit hash
+4. Post as a comment on each issue using `save_comment` — **no confirmation needed**, just do it
+
+This is **not the default** — only triggered when issue IDs/URLs are explicitly provided.
 
 ### 6. Report
 
@@ -66,8 +76,9 @@ One line: the commit hash, branch, and what was pushed. If Linear issues were up
 | Command | Purpose |
 |---------|---------|
 | `/qgit` | Stage, commit, and push in one shot |
-| `/qgit JOY-123` | Stage, commit, push + post walk-me-through on Linear issue |
+| `/qgit JOY-123` | Stage, commit, push + post activity summary on Linear issue |
 | `/qgit JOY-123 JOY-456` | Same, but updates multiple Linear issues |
+| `/qgit https://linear.app/.../JOY-123/...` | Same, but accepts full Linear URLs |
 | `/qgit:help` | Show help — what qgit does and how to use it |
 
 ## Help (`/qgit:help`)
@@ -91,12 +102,13 @@ Stage, commit, and push in one fluid motion. One command, minimal output.
 #### Usage
 
 ```
-/qgit                     # just ship it
-/qgit JOY-123             # ship it + update Linear issue with activity walk-through
-/qgit JOY-123 JOY-456     # ship it + update multiple issues
+/qgit                                              # just ship it
+/qgit JOY-123                                      # ship + update Linear issue
+/qgit JOY-123 JOY-456                              # ship + update multiple issues
+/qgit https://linear.app/.../issue/JOY-123/...     # ship + update via Linear URL
 ```
 
-Just say `/qgit`, "commit and push", "ship it", or "push this". Optionally pass Linear issue IDs to post a step-by-step activity log (walk-me-through) as a comment.
+Just say `/qgit`, "commit and push", "ship it", or "push this". Optionally pass Linear issue IDs or URLs to post an implementation summary as a comment.
 
 #### Safety rules
 
