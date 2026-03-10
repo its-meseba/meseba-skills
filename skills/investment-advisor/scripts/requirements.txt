@@ -1,0 +1,17 @@
+# Investment Advisor Multi-Agent System
+# =====================================
+# Python 3.11+ required
+
+# Google Gemini API SDK (new SDK)
+google-genai>=1.0.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# Financial data
+yfinance
+tefas
+
+# Data analysis and visualization
+pandas
+matplotlib

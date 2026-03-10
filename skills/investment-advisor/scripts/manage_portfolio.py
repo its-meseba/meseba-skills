@@ -1,0 +1,709 @@
+"""
+Portfolio Manager CLI
+=====================
+Interactive command-line tool for managing your investment portfolio.
+Supports buying/selling assets, adding new assets, and viewing portfolio state.
+
+Usage:
+    python manage_portfolio.py                # Interactive mode
+    python manage_portfolio.py --view         # View current portfolio
+    python manage_portfolio.py --history      # View change history
+"""
+
+import json
+import os
+import shutil
+import sys
+import urllib.request
+import urllib.error
+from datetime import datetime
+from typing import Optional
+
+# Add current directory to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Portfolio file paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PORTFOLIO_DIR = os.path.join(BASE_DIR, "portfolio")
+PORTFOLIO_FILE = os.path.join(PORTFOLIO_DIR, "current_portfolio.json")
+PORTFOLIO_HISTORY_DIR = os.path.join(PORTFOLIO_DIR, "history")
+PORTFOLIO_CHANGES_LOG = os.path.join(PORTFOLIO_DIR, "changes_log.json")
+
+
+def create_empty_portfolio(exchange_rate: float = 34.0) -> dict:
+    """Create an empty portfolio template with the correct structure."""
+    return {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "exchange_rate_usd_try": exchange_rate,
+        "total_portfolio_usd": 0.0,
+        "total_portfolio_tl": 0.0,
+        "assets": []
+    }
+
+
+def init_portfolio() -> None:
+    """Initialize a new empty portfolio file. Used for first-time setup."""
+    if os.path.exists(PORTFOLIO_FILE):
+        print(f"[INFO] Portfolio already exists at: {PORTFOLIO_FILE}")
+        print("  Use --view to see it, or run without flags for interactive mode.")
+        return
+
+    os.makedirs(PORTFOLIO_DIR, exist_ok=True)
+
+    # Try to fetch live exchange rate
+    print("Initializing new portfolio...")
+    rate = fetch_exchange_rate()
+    if rate:
+        print(f"  [OK] Live USD/TRY rate: {rate}")
+    else:
+        rate = 34.0
+        print(f"  [!] Could not fetch exchange rate. Using default: {rate}")
+
+    portfolio = create_empty_portfolio(exchange_rate=rate)
+    save_portfolio(portfolio)
+    print(f"\n[OK] Empty portfolio created at: {PORTFOLIO_FILE}")
+    print("  Run 'python manage_portfolio.py' to add assets interactively.")
+    print("  Or run 'python manage_portfolio.py --add-json <file>' to add assets from JSON.")
+
+
+def load_portfolio() -> dict:
+    """Load the current portfolio from JSON file."""
+    if not os.path.exists(PORTFOLIO_FILE):
+        print("[ERROR] Portfolio file not found.")
+        print("  Run 'python manage_portfolio.py --init' to create one.")
+        sys.exit(1)
+
+    with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_portfolio(portfolio: dict) -> None:
+    """Save the portfolio to JSON file."""
+    os.makedirs(PORTFOLIO_DIR, exist_ok=True)
+    with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
+        json.dump(portfolio, f, indent=2, ensure_ascii=False)
+    print(f"\n[OK] Portfolio saved to: {PORTFOLIO_FILE}")
+
+
+def archive_portfolio(portfolio: dict) -> str:
+    """Archive the current portfolio to history before making changes."""
+    os.makedirs(PORTFOLIO_HISTORY_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    archive_filename = f"portfolio_{timestamp}.json"
+    archive_path = os.path.join(PORTFOLIO_HISTORY_DIR, archive_filename)
+
+    with open(archive_path, "w", encoding="utf-8") as f:
+        json.dump(portfolio, f, indent=2, ensure_ascii=False)
+
+    print(f"[OK] Previous portfolio archived to: {archive_path}")
+    return archive_path
+
+
+def log_change(asset_name: str, action: str, pieces: float, price_per_piece_usd: float, notes: str = "") -> None:
+    """Append a change entry to the changes log."""
+    changes = []
+    if os.path.exists(PORTFOLIO_CHANGES_LOG):
+        with open(PORTFOLIO_CHANGES_LOG, "r", encoding="utf-8") as f:
+            changes = json.load(f)
+
+    change_entry = {
+        "date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "asset": asset_name,
+        "action": action,
+        "pieces": pieces,
+        "price_per_piece_usd": price_per_piece_usd,
+        "total_value_usd": round(pieces * price_per_piece_usd, 2),
+        "notes": notes,
+    }
+
+    changes.append(change_entry)
+
+    with open(PORTFOLIO_CHANGES_LOG, "w", encoding="utf-8") as f:
+        json.dump(changes, f, indent=2, ensure_ascii=False)
+
+    print(f"[OK] Change logged: {action.upper()} {pieces} x {asset_name} @ {price_per_piece_usd:.4f} USD")
+
+
+def recalculate_portfolio(portfolio: dict) -> dict:
+    """Recalculate all derived fields (total_usd, total_tl, percentages). USD-first."""
+    exchange_rate = portfolio["exchange_rate_usd_try"]
+
+    # Recalculate each asset (USD-first)
+    for asset in portfolio["assets"]:
+        asset["total_usd"] = round(asset["pieces"] * asset["price_per_piece_usd"], 2)
+        asset["total_tl"] = round(asset["total_usd"] * exchange_rate, 2)
+
+    # Recalculate totals
+    total_usd = sum(asset["total_usd"] for asset in portfolio["assets"])
+    portfolio["total_portfolio_usd"] = round(total_usd, 2)
+    portfolio["total_portfolio_tl"] = round(total_usd * exchange_rate, 2)
+
+    # Recalculate percentages
+    for asset in portfolio["assets"]:
+        if total_usd > 0:
+            asset["percentage"] = round((asset["total_usd"] / total_usd) * 100, 2)
+        else:
+            asset["percentage"] = 0.0
+
+    # Update date
+    portfolio["date"] = datetime.now().strftime("%Y-%m-%d")
+
+    return portfolio
+
+
+def display_portfolio(portfolio: dict) -> None:
+    """Display the portfolio in a formatted table."""
+    print("\n" + "=" * 100)
+    print(f"  CURRENT PORTFOLIO (as of {portfolio['date']})")
+    print(f"  Exchange Rate: 1 USD = {portfolio['exchange_rate_usd_try']:.2f} TRY")
+    print("=" * 100)
+
+    # Header
+    header = f"{'#':<4} {'Asset':<28} {'Pieces':>8} {'Price/Pc (USD)':>15} {'Total (USD)':>12} {'Total (TL)':>14} {'%':>7}"
+    print(header)
+    print("-" * 100)
+
+    # Assets
+    for i, asset in enumerate(portfolio["assets"], 1):
+        row = (
+            f"{i:<4} "
+            f"{asset['name']:<28} "
+            f"{asset['pieces']:>8.2f} "
+            f"{asset['price_per_piece_usd']:>15,.6f} "
+            f"{asset['total_usd']:>12,.2f} "
+            f"{asset['total_tl']:>14,.2f} "
+            f"{asset['percentage']:>6.2f}%"
+        )
+        print(row)
+
+    # Totals
+    print("-" * 100)
+    total_row = (
+        f"{'':4} "
+        f"{'TOTAL':<28} "
+        f"{'':>8} "
+        f"{'':>15} "
+        f"{portfolio['total_portfolio_usd']:>12,.2f} "
+        f"{portfolio['total_portfolio_tl']:>14,.2f} "
+        f"{'100.00%':>7}"
+    )
+    print(total_row)
+    print("=" * 100)
+
+
+def display_changes_history() -> None:
+    """Display the changes log."""
+    if not os.path.exists(PORTFOLIO_CHANGES_LOG):
+        print("\n[INFO] No changes recorded yet.")
+        return
+
+    with open(PORTFOLIO_CHANGES_LOG, "r", encoding="utf-8") as f:
+        changes = json.load(f)
+
+    if not changes:
+        print("\n[INFO] No changes recorded yet.")
+        return
+
+    print("\n" + "=" * 90)
+    print("  PORTFOLIO CHANGE HISTORY")
+    print("=" * 90)
+
+    header = f"{'Date':<22} {'Action':<6} {'Asset':<28} {'Pieces':>8} {'Price/Pc(USD)':>14} {'Total (USD)':>12}"
+    print(header)
+    print("-" * 92)
+
+    for change in changes:
+        row = (
+            f"{change['date']:<22} "
+            f"{change['action'].upper():<6} "
+            f"{change['asset']:<28} "
+            f"{change['pieces']:>8.2f} "
+            f"{change.get('price_per_piece_usd', change.get('price_per_piece_tl', 0)):>14,.4f} "
+            f"{change.get('total_value_usd', change.get('total_value_tl', 0)):>12,.2f}"
+        )
+        print(row)
+        if change.get("notes"):
+            print(f"  Note: {change['notes']}")
+
+    print("=" * 90)
+
+
+def get_input(prompt: str, default: Optional[str] = None) -> str:
+    """Get user input with optional default value."""
+    if default:
+        user_input = input(f"{prompt} [{default}]: ").strip()
+        return user_input if user_input else default
+    return input(f"{prompt}: ").strip()
+
+
+def get_float_input(prompt: str, default: Optional[float] = None) -> float:
+    """Get a float value from user input."""
+    while True:
+        try:
+            if default is not None:
+                raw = input(f"{prompt} [{default}]: ").strip()
+                if not raw:
+                    return default
+                return float(raw)
+            else:
+                return float(input(f"{prompt}: ").strip())
+        except ValueError:
+            print("  [!] Please enter a valid number.")
+
+
+def get_int_choice(prompt: str, min_val: int, max_val: int) -> int:
+    """Get an integer choice within a range."""
+    while True:
+        try:
+            choice = int(input(f"{prompt}: ").strip())
+            if min_val <= choice <= max_val:
+                return choice
+            print(f"  [!] Please enter a number between {min_val} and {max_val}.")
+        except ValueError:
+            print("  [!] Please enter a valid number.")
+
+
+def fetch_exchange_rate() -> Optional[float]:
+    """
+    Fetch the current USD/TRY exchange rate from a free API.
+
+    Returns:
+        The exchange rate (1 USD = X TRY), or None if the fetch fails.
+    """
+    apis = [
+        ("https://open.er-api.com/v6/latest/USD", lambda d: d["rates"]["TRY"]),
+        ("https://api.exchangerate-api.com/v4/latest/USD", lambda d: d["rates"]["TRY"]),
+    ]
+
+    for url, extractor in apis:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "PortfolioManager/1.0"})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode("utf-8"))
+                rate = extractor(data)
+                if rate and rate > 0:
+                    return round(float(rate), 4)
+        except (urllib.error.URLError, json.JSONDecodeError, KeyError, TimeoutError):
+            continue
+
+    return None
+
+
+def get_exchange_rate(portfolio: dict) -> float:
+    """
+    Get the current USD/TRY exchange rate. Tries to fetch from web first,
+    falls back to manual entry.
+
+    Args:
+        portfolio: Current portfolio dict (for stored fallback rate)
+
+    Returns:
+        The exchange rate and updates the portfolio in-place.
+    """
+    print("\n  Fetching current USD/TRY exchange rate...")
+    rate = fetch_exchange_rate()
+
+    if rate is not None:
+        print(f"  [OK] Live exchange rate: 1 USD = {rate:.4f} TRY")
+        confirm = get_input(f"  Use this rate? (y/n)", default="y")
+        if confirm.lower() == "y":
+            portfolio["exchange_rate_usd_try"] = rate
+            return rate
+        else:
+            manual_rate = get_float_input(
+                "  Enter exchange rate manually (1 USD = ? TRY)",
+                default=rate,
+            )
+            portfolio["exchange_rate_usd_try"] = manual_rate
+            return manual_rate
+    else:
+        print("  [!] Could not fetch exchange rate from web.")
+        manual_rate = get_float_input(
+            "  Enter USD/TRY exchange rate manually",
+            default=portfolio["exchange_rate_usd_try"],
+        )
+        portfolio["exchange_rate_usd_try"] = manual_rate
+        return manual_rate
+
+
+def get_price_with_currency(prompt: str, exchange_rate: float, default_usd: Optional[float] = None) -> float:
+    """
+    Ask the user for a price in either USD or TL, then convert to USD.
+
+    Args:
+        prompt: Description of what price is being entered
+        exchange_rate: Current USD/TRY exchange rate
+        default_usd: Optional default price in USD
+
+    Returns:
+        Price per piece in USD
+    """
+    default_str = f" [{default_usd:,.6f} USD]" if default_usd and default_usd > 0 else ""
+
+    while True:
+        raw = input(f"{prompt} (Please give the currency USD or TL){default_str}: ").strip()
+
+        # Handle default
+        if not raw and default_usd and default_usd > 0:
+            return default_usd
+
+        # Parse value and currency
+        raw_upper = raw.upper()
+
+        # Try to extract currency suffix/prefix
+        value_str = None
+        currency = None
+
+        if raw_upper.endswith("USD") or raw_upper.endswith("$"):
+            value_str = raw_upper.replace("USD", "").replace("$", "").strip()
+            currency = "USD"
+        elif raw_upper.endswith("TL") or raw_upper.endswith("TRY"):
+            value_str = raw_upper.replace("TRY", "").replace("TL", "").strip()
+            currency = "TL"
+        elif raw_upper.startswith("$"):
+            value_str = raw_upper.replace("$", "").strip()
+            currency = "USD"
+        else:
+            # No currency given, ask explicitly
+            try:
+                value = float(raw.replace(",", ""))
+            except ValueError:
+                print("  [!] Invalid input. Enter a number followed by USD or TL (e.g., '150 USD' or '5500 TL').")
+                continue
+
+            print("  1. USD")
+            print("  2. TL")
+            cur_choice = get_int_choice("  Which currency is this price in?", 1, 2)
+            currency = "USD" if cur_choice == 1 else "TL"
+            value_str = str(value)
+
+        try:
+            value = float(value_str.replace(",", ""))
+        except ValueError:
+            print("  [!] Invalid number. Try again (e.g., '150 USD' or '5500 TL').")
+            continue
+
+        if value < 0:
+            print("  [!] Price cannot be negative.")
+            continue
+
+        if currency == "USD":
+            print(f"  -> {value:,.6f} USD")
+            return value
+        else:
+            price_usd = round(value / exchange_rate, 6)
+            print(f"  -> {value:,.2f} TL / {exchange_rate:.4f} = {price_usd:,.6f} USD")
+            return price_usd
+
+
+def action_buy_sell(portfolio: dict) -> dict:
+    """Handle a buy or sell action on an existing asset."""
+    print("\n--- SELECT ASSET ---")
+    for i, asset in enumerate(portfolio["assets"], 1):
+        print(f"  {i}. {asset['name']} (currently {asset['pieces']:.2f} pieces)")
+
+    asset_idx = get_int_choice("Select asset number", 1, len(portfolio["assets"])) - 1
+    selected_asset = portfolio["assets"][asset_idx]
+
+    print(f"\nSelected: {selected_asset['name']}")
+    print(f"Current pieces: {selected_asset['pieces']:.2f}")
+    print(f"Current price/piece: {selected_asset['price_per_piece_usd']:,.6f} USD")
+
+    # Buy or Sell
+    print("\n  1. BUY (add more)")
+    print("  2. SELL (reduce)")
+    action_choice = get_int_choice("Select action", 1, 2)
+    action = "buy" if action_choice == 1 else "sell"
+
+    # How many pieces
+    pieces = get_float_input(f"How many pieces to {action}?")
+
+    if action == "sell" and pieces > selected_asset["pieces"]:
+        print(f"  [!] You only have {selected_asset['pieces']:.2f} pieces. Selling all.")
+        pieces = selected_asset["pieces"]
+
+    # Fetch/confirm exchange rate
+    exchange_rate = get_exchange_rate(portfolio)
+
+    # Price per piece (currency-aware, stored in USD)
+    price_per_piece_usd = get_price_with_currency(
+        "Price per piece?",
+        exchange_rate=exchange_rate,
+        default_usd=selected_asset["price_per_piece_usd"] if selected_asset["price_per_piece_usd"] > 0 else None,
+    )
+
+    # Apply change
+    if action == "buy":
+        # Weighted average price if already holding
+        if selected_asset["pieces"] > 0 and selected_asset["price_per_piece_usd"] > 0:
+            total_old_value = selected_asset["pieces"] * selected_asset["price_per_piece_usd"]
+            total_new_value = pieces * price_per_piece_usd
+            new_total_pieces = selected_asset["pieces"] + pieces
+            selected_asset["price_per_piece_usd"] = round((total_old_value + total_new_value) / new_total_pieces, 6)
+        else:
+            selected_asset["price_per_piece_usd"] = price_per_piece_usd
+        selected_asset["pieces"] = round(selected_asset["pieces"] + pieces, 4)
+    else:
+        selected_asset["pieces"] = round(selected_asset["pieces"] - pieces, 4)
+        if selected_asset["pieces"] <= 0:
+            selected_asset["pieces"] = 0
+            # Keep price for reference, user can remove asset separately
+
+        # Update price to current market price on sell
+        selected_asset["price_per_piece_usd"] = price_per_piece_usd
+
+    # Optional notes
+    notes = get_input("Any notes? (press Enter to skip)", default="")
+
+    # Log the change
+    log_change(selected_asset["name"], action, pieces, price_per_piece_usd, notes)
+
+    # Recalculate
+    portfolio = recalculate_portfolio(portfolio)
+
+    return portfolio
+
+
+def action_add_asset(portfolio: dict) -> dict:
+    """Add a new asset to the portfolio."""
+    print("\n--- ADD NEW ASSET ---")
+
+    name = get_input("Asset name (e.g., 'THYAO Stock (BIST100)')")
+
+    # Check duplicate
+    existing_names = [a["name"].lower() for a in portfolio["assets"]]
+    if name.lower() in existing_names:
+        print(f"  [!] Asset '{name}' already exists. Use buy/sell to modify it.")
+        return portfolio
+
+    # Category
+    print("\nCategory:")
+    print("  1. global_stocks_funds")
+    print("  2. turkish_stocks_funds")
+    print("  3. gold_silver")
+    print("  4. cash")
+    print("  5. other")
+    cat_choice = get_int_choice("Select category", 1, 5)
+    categories = {
+        1: "global_stocks_funds",
+        2: "turkish_stocks_funds",
+        3: "gold_silver",
+        4: "cash",
+        5: "other"
+    }
+    category = categories[cat_choice]
+
+    pieces = get_float_input("Number of pieces?")
+
+    # Fetch/confirm exchange rate
+    exchange_rate = get_exchange_rate(portfolio)
+
+    # Price per piece (currency-aware, stored in USD)
+    price_per_piece_usd = get_price_with_currency(
+        "Price per piece?",
+        exchange_rate=exchange_rate,
+    )
+
+    new_asset = {
+        "name": name,
+        "category": category,
+        "pieces": pieces,
+        "price_per_piece_usd": price_per_piece_usd,
+        "total_tl": 0.0,
+        "total_usd": 0.0,
+        "percentage": 0.0,
+    }
+
+    portfolio["assets"].append(new_asset)
+
+    # Log the change
+    notes = get_input("Any notes? (press Enter to skip)", default="")
+    log_change(name, "buy", pieces, price_per_piece_usd, notes)
+
+    # Recalculate
+    portfolio = recalculate_portfolio(portfolio)
+
+    print(f"\n[OK] Added '{name}' to portfolio.")
+    return portfolio
+
+
+def action_remove_asset(portfolio: dict) -> dict:
+    """Remove an asset from the portfolio entirely."""
+    print("\n--- REMOVE ASSET ---")
+
+    zero_assets = [a for a in portfolio["assets"] if a["pieces"] <= 0]
+    if not zero_assets:
+        print("\n  No assets with 0 pieces. Sell the asset first before removing it.")
+        return portfolio
+
+    print("\nAssets with 0 pieces (eligible for removal):")
+    for i, asset in enumerate(zero_assets, 1):
+        print(f"  {i}. {asset['name']}")
+
+    choice = get_int_choice("Select asset to remove (0 to cancel)", 0, len(zero_assets))
+    if choice == 0:
+        return portfolio
+
+    asset_to_remove = zero_assets[choice - 1]
+    portfolio["assets"] = [a for a in portfolio["assets"] if a["name"] != asset_to_remove["name"]]
+
+    portfolio = recalculate_portfolio(portfolio)
+    print(f"\n[OK] Removed '{asset_to_remove['name']}' from portfolio.")
+    return portfolio
+
+
+def action_update_prices(portfolio: dict) -> dict:
+    """Update the price per piece for all or selected assets."""
+    print("\n--- UPDATE ASSET PRICES ---")
+    print("  1. Update all prices")
+    print("  2. Update a single asset price")
+
+    choice = get_int_choice("Select option", 1, 2)
+
+    # Fetch/confirm exchange rate first
+    exchange_rate = get_exchange_rate(portfolio)
+
+    if choice == 1:
+        print("\nEnter current price per piece for each asset (press Enter to keep current):\n")
+        for asset in portfolio["assets"]:
+            new_price = get_price_with_currency(
+                f"  {asset['name']}",
+                exchange_rate=exchange_rate,
+                default_usd=asset["price_per_piece_usd"],
+            )
+            asset["price_per_piece_usd"] = new_price
+    else:
+        for i, asset in enumerate(portfolio["assets"], 1):
+            print(f"  {i}. {asset['name']} ({asset['price_per_piece_usd']:,.6f} USD)")
+        asset_idx = get_int_choice("Select asset", 1, len(portfolio["assets"])) - 1
+        selected = portfolio["assets"][asset_idx]
+        new_price = get_price_with_currency(
+            f"New price for {selected['name']}",
+            exchange_rate=exchange_rate,
+            default_usd=selected["price_per_piece_usd"],
+        )
+        selected["price_per_piece_usd"] = new_price
+
+    portfolio = recalculate_portfolio(portfolio)
+    print("\n[OK] Prices updated and portfolio recalculated.")
+    return portfolio
+
+
+def interactive_menu() -> None:
+    """Main interactive menu loop."""
+    portfolio = load_portfolio()
+
+    print("\n" + "=" * 60)
+    print("  INVESTMENT PORTFOLIO MANAGER")
+    print("=" * 60)
+
+    while True:
+        display_portfolio(portfolio)
+
+        print("\n  ACTIONS:")
+        print("  1. Buy / Sell an existing asset")
+        print("  2. Add a new asset")
+        print("  3. Remove an asset (0 pieces only)")
+        print("  4. Update asset prices")
+        print("  5. View change history")
+        print("  6. Save and exit")
+        print("  7. Exit without saving")
+
+        choice = get_int_choice("\nSelect action", 1, 7)
+
+        if choice == 1:
+            archive_portfolio(portfolio)
+            portfolio = action_buy_sell(portfolio)
+        elif choice == 2:
+            archive_portfolio(portfolio)
+            portfolio = action_add_asset(portfolio)
+        elif choice == 3:
+            portfolio = action_remove_asset(portfolio)
+        elif choice == 4:
+            archive_portfolio(portfolio)
+            portfolio = action_update_prices(portfolio)
+        elif choice == 5:
+            display_changes_history()
+        elif choice == 6:
+            save_portfolio(portfolio)
+            print("\n[OK] Portfolio saved. Goodbye!")
+            break
+        elif choice == 7:
+            confirm = get_input("Are you sure? Unsaved changes will be lost (y/n)", default="n")
+            if confirm.lower() == "y":
+                print("\n[OK] Exited without saving.")
+                break
+
+
+def add_assets_from_json(json_path: str) -> None:
+    """
+    Add assets to the portfolio from a JSON file (non-interactive).
+    The JSON file should contain a list of asset objects with fields:
+    name, category, pieces, price_per_piece_usd.
+
+    If portfolio doesn't exist, creates it first.
+    """
+    if not os.path.exists(PORTFOLIO_FILE):
+        print("[INFO] No portfolio found. Creating one first...")
+        init_portfolio()
+
+    portfolio = load_portfolio()
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        new_assets = json.load(f)
+
+    if not isinstance(new_assets, list):
+        new_assets = [new_assets]
+
+    for asset_data in new_assets:
+        name = asset_data.get("name", "Unknown")
+        # Check duplicate
+        existing_names = [a["name"].lower() for a in portfolio["assets"]]
+        if name.lower() in existing_names:
+            print(f"  [SKIP] '{name}' already exists.")
+            continue
+
+        new_asset = {
+            "name": name,
+            "category": asset_data.get("category", "other"),
+            "pieces": float(asset_data.get("pieces", 0)),
+            "price_per_piece_usd": float(asset_data.get("price_per_piece_usd", 0)),
+            "total_tl": 0.0,
+            "total_usd": 0.0,
+            "percentage": 0.0,
+        }
+        portfolio["assets"].append(new_asset)
+        print(f"  [OK] Added '{name}'")
+
+    portfolio = recalculate_portfolio(portfolio)
+    save_portfolio(portfolio)
+    display_portfolio(portfolio)
+
+
+def main():
+    """Entry point with argument parsing."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Investment Portfolio Manager")
+    parser.add_argument("--view", action="store_true", help="View current portfolio")
+    parser.add_argument("--history", action="store_true", help="View change history")
+    parser.add_argument("--init", action="store_true", help="Initialize a new empty portfolio (first-time setup)")
+    parser.add_argument("--add-json", type=str, metavar="FILE", help="Add assets from a JSON file (non-interactive)")
+    args = parser.parse_args()
+
+    if args.init:
+        init_portfolio()
+    elif args.add_json:
+        add_assets_from_json(args.add_json)
+    elif args.view:
+        portfolio = load_portfolio()
+        portfolio = recalculate_portfolio(portfolio)
+        display_portfolio(portfolio)
+    elif args.history:
+        display_changes_history()
+    else:
+        interactive_menu()
+
+
+if __name__ == "__main__":
+    main()
