@@ -23,18 +23,27 @@ digraph ship_wreck_check {
   run_commands [label="3. Run ALL quality commands\n(build, lint, typecheck, tests)"];
   commands_pass [label="All pass?" shape=diamond];
   fix_commands [label="Fix failures\nthen restart"];
-  deep_review [label="4. Deep review: read each changed file\n+ related files + project context"];
-  simplify [label="5. Invoke code-simplifier agent\non changed files"];
+  intent [label="4. Intent verification\n(find spec/plan, verify against code)"];
+  plan_found [label="Plan found?" shape=diamond];
+  verify_intent [label="Dispatch spec-reviewer:\ncheck code against spec"];
+  no_plan [label="Set flag:\nintent check skipped"];
+  deep_review [label="5. Deep review: read each changed file\n+ related files + project context\n(informed by spec if available)"];
+  simplify [label="6. Invoke code-simplifier agent\non changed files"];
   issues [label="Issues found?" shape=diamond];
-  report [label="6. Report with file:line refs\nBLOCKER / WARNING / SUGGESTION"];
+  report [label="7. Report with file:line refs\nBLOCKER / WARNING / SUGGESTION\n+ intent gaps + red warning if no plan"];
   fix [label="Fix issues"];
   rerun [label="Re-run from step 3"];
   clean [label="Ship it" shape=ellipse];
 
   gather -> discover -> run_commands -> commands_pass;
   commands_pass -> fix_commands [label="no"];
-  commands_pass -> deep_review [label="yes"];
+  commands_pass -> intent [label="yes"];
   fix_commands -> run_commands;
+  intent -> plan_found;
+  plan_found -> verify_intent [label="yes"];
+  plan_found -> no_plan [label="no"];
+  verify_intent -> deep_review;
+  no_plan -> deep_review;
   deep_review -> simplify -> issues;
   issues -> report [label="yes"];
   issues -> clean [label="no"];
@@ -80,9 +89,68 @@ Read these files. If they say "run X before committing", run X.
 
 Run every command you discovered. If any fail, fix the failures before proceeding to the code review. There is zero point reviewing code that doesn't build or pass lint.
 
-### Step 4: Deep Review — Understand What You Changed
+### Step 4: Intent Verification — Does the Code Match the Plan?
+
+Before reviewing code quality, check whether the implementation matches its original intent. This step connects the code back to the spec/plan that motivated it.
+
+#### Finding the Plan
+
+Search these locations for spec/plan documents:
+
+- `docs/superpowers/specs/` — design specs from brainstorming
+- `docs/plans/` — implementation plans
+- `docs/superpowers/plans/` — plans from the superpowers workflow
+
+**Matching strategy (in order):**
+
+1. **Branch name keywords** — Extract meaningful words from the current branch name (e.g., `fix/user-reviews-page-updates` → "user", "reviews", "page", "updates") and match against plan filenames and their contents.
+2. **Changed file context** — Look at the changed files from Step 1. What domain do they touch? (e.g., changes in `src/components/reviews/` suggest a reviews-related plan). Match plan contents against these domains.
+3. **Multiple plans** — The implementation may span multiple plans. If changed files clearly map to different plans, include ALL matching plans.
+4. **Ambiguity** — If you find multiple candidate plans and can't confidently determine which ones apply, show the candidates to the user and ask them to confirm:
+   > "I found these plans that might relate to your changes:
+   > 1. `docs/plans/2026-03-04-review-duplicates-and-freshness-fix.md`
+   > 2. `docs/superpowers/specs/2026-03-03-table-keyboard-navigation-scroll.md`
+   > Which ones apply to this work? (or 'none')"
+
+#### Verifying Against the Plan
+
+If one or more plans are found, dispatch a **spec-reviewer** analysis. This is a skeptical review — read the actual code, don't trust summaries:
+
+1. Read each matched plan/spec fully — extract acceptance criteria, requirements, constraints, and scope boundaries
+2. Read each changed file fully — understand what was actually built
+3. Compare implementation against spec:
+   - **INTENT_MATCH** — Implementation fulfills the spec requirement
+   - **INTENT_GAP** — Spec required something that the implementation doesn't deliver
+   - **OVER_BUILT** — Implementation includes functionality not in the spec (scope creep)
+   - **SPEC_AMBIGUITY** — Spec was unclear and implementation made an assumption worth flagging
+
+Report intent findings with the same `file:line` format:
+
+```
+[INTENT_GAP] docs/plans/2026-03-04-review-fix.md requirement: "deduplicate reviews by user+date"
+  → Not implemented in src/services/review-service.ts — no deduplication logic found
+
+[OVER_BUILT] src/components/reviews/ReviewCard.tsx:45 - Added animation on hover
+  → Not in spec. Intentional enhancement or scope creep?
+
+[INTENT_MATCH] src/utils/reviews/freshness.ts - Freshness calculation matches spec criteria ✓
+```
+
+#### If No Plan Is Found
+
+If no matching plan/spec is found in any of the search locations:
+
+1. **Set a flag** — `intentCheckSkipped = true`
+2. **Continue to Step 5** — proceed with the normal code review
+3. **In Step 7 (Report)** — append a prominent red warning (see Step 7)
+
+Do NOT block the review because a plan is missing. The code review is still valuable on its own.
+
+### Step 5: Deep Review — Understand What You Changed
 
 This is the heart of the review. For every changed file, truly understand it — don't skim.
+
+**If a spec/plan was found in Step 4**, use it as your lens — you know what the code is supposed to do, so read with purpose. Flag anything that contradicts the spec or seems unrelated to it.
 
 **Read each changed file fully.** Then read the files that depend on it and the files it depends on. Understand the ripple effects. Use Grep and Glob to find callers, importers, and related code.
 
@@ -109,7 +177,7 @@ This is the heart of the review. For every changed file, truly understand it —
 - **Consistent patterns** — Same export style, hook patterns, error handling approach as neighboring files?
 - **File size** — New file already large? Probably needs splitting.
 
-### Step 5: Invoke the Code-Simplifier Agent
+### Step 6: Invoke the Code-Simplifier Agent
 
 After your manual review, dispatch the `code-simplifier` agent (available as the `simplify` skill) on the changed files. It provides a focused second pair of eyes on:
 
@@ -122,7 +190,7 @@ After your manual review, dispatch the `code-simplifier` agent (available as the
 
 The code-simplifier focuses on recently modified code by default — exactly what we need. Incorporate its findings into your report.
 
-### Step 6: Report Findings
+### Step 7: Report Findings
 
 Be specific and actionable. For each issue, cite the exact location:
 
@@ -142,11 +210,18 @@ Severity levels:
 - **WARNING** — Code smell, convention violation, potential issue. Should fix.
 - **SUGGESTION** — Could be better but not harmful. Nice to have.
 
-### Step 7: Fix and Re-verify
+**If `intentCheckSkipped` is true** (no plan was found in Step 4), append the following red warning at the end of the report. This must be visually prominent:
+
+> **🔴 WARNING: No spec/plan found — intent verification was skipped.**
+> Could not verify whether the implementation matches the original intent.
+> Consider creating plans via `/brainstorming` → `/writing-plans` for future work to enable full verification.
+
+### Step 8: Fix and Re-verify
 
 After fixing, re-run from Step 3. The cycle ends when:
 - All quality commands pass
 - No BLOCKERs or WARNINGs remain
+- No INTENT_GAPs remain (if a plan was found)
 - The code-simplifier has no further findings
 - You can honestly say: "I'd approve this PR if someone else wrote it"
 
@@ -192,17 +267,18 @@ When this sub-command is invoked, present the following to the user:
 
 A brutal, honest quality review of your code changes — the kind a senior engineer would give a junior's PR. Catches wrecks before they ship.
 
-#### The 7-Step Process
+#### The 8-Step Process
 
 | Step | What happens |
 |------|-------------|
 | 1. **Gather changes** | Finds all changed files (uncommitted, unpushed, and branch diff) |
 | 2. **Discover quality commands** | Scans package.json, CLAUDE.md, Makefile, CI config for lint/build/test commands |
 | 3. **Run all quality commands** | Executes every discovered command — build, lint, typecheck, tests |
-| 4. **Deep review** | Reads every changed file + related files, checks for production safety, code quality, structure |
-| 5. **Code simplifier** | Invokes the code-simplifier agent for a second pair of eyes |
-| 6. **Report findings** | Reports issues with exact `file:line` references and severity levels |
-| 7. **Fix and re-verify** | Fixes issues and re-runs from step 3 until clean |
+| 4. **Intent verification** | Finds matching spec/plan docs, verifies implementation matches original intent |
+| 5. **Deep review** | Reads every changed file + related files, checks for production safety, code quality, structure (informed by spec) |
+| 6. **Code simplifier** | Invokes the code-simplifier agent for a second pair of eyes |
+| 7. **Report findings** | Reports issues with exact `file:line` references, severity levels, and intent gaps |
+| 8. **Fix and re-verify** | Fixes issues and re-runs from step 3 until clean |
 
 #### Severity Levels
 
@@ -222,6 +298,7 @@ Also triggers on: "review this", "is this ready", "final check", "check my work"
 
 #### What it checks
 
+- **Intent compliance** — matches implementation against spec/plan from superpowers workflow (INTENT_MATCH/INTENT_GAP/OVER_BUILT)
 - **Production safety** — broken callers, error handling, edge cases, resource cleanup, environment differences
 - **Code quality** — duplications, god files, separation of concerns, dead code, magic values, naming
 - **File structure** — new files in the right place, consistent patterns, file size
