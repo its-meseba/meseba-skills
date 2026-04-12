@@ -66,6 +66,38 @@ Views → ViewModels → AnalyticsRouter → [Firebase, PostHog, Meta, AppsFlyer
 
 When CLI/API doesn't cover a task (e.g., Adapty paywall visual builder), use Playwright MCP.
 
+**Always dispatch Playwright work as a subagent** — never inline browser automation in the main context. Use the Agent tool with the appropriate model tier based on task complexity (see Model Selection below).
+
+### Model Selection for Playwright Subagents
+
+Pick the model based on how much reasoning the browser task requires:
+
+| Model | Use when | Examples |
+|-------|----------|---------|
+| **Haiku** | Pure mechanical action — click, type, navigate, screenshot. No decisions needed. | Filling a form with known values, clicking a known button, navigating to a URL, taking screenshots for verification |
+| **Sonnet** | Needs to understand UI structure, pick from options, adapt to what it sees on screen. | Selecting a paywall template, customizing copy fields, navigating an unfamiliar dashboard flow |
+| **Opus** | Complex multi-step flows with branching decisions, error recovery, or ambiguous UI states. | Setting up a completely new dashboard with many unknown steps, recovering from auth failures mid-flow, cross-dashboard orchestration |
+
+**Default:** Start with Haiku. If the task requires judgment calls (which template to pick, how to interpret UI), use Sonnet. Reserve Opus for flows that repeatedly fail or require deep reasoning about the UI state.
+
+### Dispatching Playwright Subagents
+
+Use the Agent tool. Always include in the prompt:
+1. Current browser state (URL, what's visible)
+2. Exact steps to perform (the more specific, the better for Haiku)
+3. What copy/values to enter
+4. What to return (screenshots paths, what succeeded/failed)
+
+```
+Agent({
+  description: "Fill Adapty paywall form fields",
+  model: "haiku",          // or "sonnet" / "opus"
+  prompt: "The browser is already at https://app.adapty.io/paywalls/123/edit.
+           Click the headline field (ref: e42), clear it, type 'Touch Grass First'.
+           Click Save. Take a screenshot. Return: success/failure + screenshot path."
+})
+```
+
 ### Setup
 
 Playwright MCP must be configured to use the user's existing Chrome profile:
@@ -90,13 +122,14 @@ Playwright MCP must be configured to use the user's existing Chrome profile:
 
 ### Dashboard Operations
 
-| Dashboard | What to automate | How |
-|-----------|-----------------|-----|
-| Adapty | Paywall visual builder, template selection | Playwright — no API available |
-| PostHog | Project settings, dashboards | PostHog MCP (`mcp__posthog__*`) or CLI |
-| Firebase | Project creation, service accounts | `firebase` CLI |
-| App Store Connect | Everything | `asc` CLI (covers 95% of operations) |
-| AppsFlyer | Dashboard setup | Playwright (limited API) |
+| Dashboard | What to automate | Model | How |
+|-----------|-----------------|-------|-----|
+| Adapty | Paywall visual builder, template selection | Sonnet | Playwright subagent — no API available |
+| Adapty | Simple field edits, button clicks after builder is open | Haiku | Playwright subagent |
+| PostHog | Project settings, dashboards | Haiku | PostHog MCP (`mcp__posthog__*`) or CLI preferred |
+| Firebase | Project creation, service accounts | Haiku | `firebase` CLI preferred |
+| App Store Connect | Everything | Haiku | `asc` CLI (covers 95% of operations) |
+| AppsFlyer | Dashboard setup, complex flows | Sonnet | Playwright subagent (limited API) |
 
 ---
 
@@ -340,6 +373,7 @@ BUNDLE_ID=$(grep "PRODUCT_BUNDLE_IDENTIFIER" project.yml | head -1 | awk '{print
 | `analytics-tracking` | Plan analytics event taxonomy |
 | `app-store-optimization` | ASO after app store connection |
 | `paywall-upgrade-cro` | Optimize paywall conversion after Adapty setup |
+| `app-onboarding-questionnaire` | Design and build questionnaire-style onboarding flows (Duolingo/Noom pattern) |
 
 ## Rules
 
