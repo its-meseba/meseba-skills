@@ -480,7 +480,8 @@ BUNDLE_ID=$(grep "PRODUCT_BUNDLE_IDENTIFIER" project.yml | head -1 | awk '{print
 |-------|---------------------|
 | `ship-wreck-check` | After `/shipyard:init` — verify SDK integration quality |
 | `qgit` | After setup — commit and push changes |
-| `ios-marketing-capture` | Capture App Store screenshots |
+| `ios-marketing-capture` | Capture raw in-app screenshots from simulator |
+| `app-store-screenshots` | Generate marketing advertisement slides (Next.js) — headlines, mockup frames, multi-locale, export at all Apple sizes |
 | `superwall-*-quickstart` | Platform-specific Superwall setup |
 | `analytics-tracking` | Plan analytics event taxonomy |
 | `app-store-optimization` | ASO after app store connection |
