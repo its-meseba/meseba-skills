@@ -104,7 +104,7 @@ Before writing any file, check if it already exists. Never overwrite silently. S
    >   (d) Add chapters that aren't in the vault yet (EPUB may have more than the folder)
    >   (e) Review and decide file-by-file
 
-3. Never delete files. Never overwrite `## My notes` sections (the user's own writing).
+3. Never delete files. Never overwrite `## ✍️ My notes` sections (the user's own writing).
 
 **On `:brief N` or `:synthesize N` when the section is already filled:**
 
@@ -128,16 +128,16 @@ Before writing any file, check if it already exists. Never overwrite silently. S
 7. **Create folder + cache.** Create the book folder. Save parsed EPUB JSON to `{SKILL_DIR}/.cache/{book-folder-name}.json` for fast re-use by `:brief` and `:synthesize`.
 8. **Generate `0. General.md`.** Use extended thinking. Source material: title, author, TOC (all chapter titles in order), and sample text (first 6000 chars of chapter 1 + first 6000 chars of chapter 2). Fill the **Book Overview Template** below.
 9. **Create chapter stubs.** For each chapter, write a file with frontmatter + the three empty section headers (Pre-read brief, My notes, Post-read synthesis). Include `synthesis_has_notes: false` in the frontmatter.
-10. **Warn the user about duration.** Print: "Generating pre-read briefs + post-read syntheses for all {N} chapters. This uses Opus extended thinking for each chapter and will take roughly {N}–{N*2} minutes. Syntheses are generated WITHOUT your reading notes (you haven't read yet) — after you read a chapter and take notes in `## My notes`, re-run `/reading-lens:synthesize <N>` to upgrade that chapter's synthesis with your framing." Do not block on a confirmation — proceed.
+10. **Warn the user about duration.** Print: "Generating pre-read briefs + post-read syntheses for all {N} chapters. This uses Opus extended thinking for each chapter and will take roughly {N}–{N*2} minutes. Syntheses are generated WITHOUT your reading notes (you haven't read yet) — after you read a chapter and take notes in `## ✍️ My notes`, re-run `/reading-lens:synthesize <N>` to upgrade that chapter's synthesis with your framing." Do not block on a confirmation — proceed.
 11. **Generate pre-read briefs for every chapter.** Iterate N = 1..chapters. For each N, run the `:brief N` workflow inline (steps 2–6 of the brief workflow) using the cached EPUB JSON. After each write, update the chapter file's frontmatter: `brief_generated: <ISO-date>`, `status: briefed`.
-12. **Generate post-read syntheses for every chapter.** Iterate N = 1..chapters. For each N, run the `:synthesize N` workflow inline with one variation: since `## My notes` is empty, do NOT fabricate user-note references. Produce the synthesis from chapter text + book lenses only. After writing, update frontmatter: `synthesis_generated: <ISO-date>`, `synthesis_has_notes: false`, `status: synthesized`. Prepend this callout block to the `## Post-read synthesis` body, before the template output:
+12. **Generate post-read syntheses for every chapter.** Iterate N = 1..chapters. For each N, run the `:synthesize N` workflow inline with one variation: since `## ✍️ My notes` is empty, do NOT fabricate user-note references. Produce the synthesis from chapter text + book lenses only. After writing, update frontmatter: `synthesis_generated: <ISO-date>`, `synthesis_has_notes: false`, `status: synthesized`. Prepend this callout block to the `## Post-read synthesis` body, before the template output:
 
     ```
     > [!info] Generated at setup — no reader notes yet
-    > This synthesis was generated from chapter text only, before you read the chapter. After you read and take notes in `## My notes`, re-run `/reading-lens:synthesize {N}` to produce a notes-aware upgrade.
+    > This synthesis was generated from chapter text only, before you read the chapter. After you read and take notes in `## ✍️ My notes`, re-run `/reading-lens:synthesize {N}` to produce a notes-aware upgrade.
     ```
 
-13. **Report.** Tell the user: book title, author, N chapters parsed, briefs generated, syntheses generated (all flagged `synthesis_has_notes: false`), full folder path. Recommend: "Start with chapter 1. After each chapter, fill `## My notes` then re-run `/reading-lens:synthesize N` to upgrade that chapter's synthesis."
+13. **Report.** Tell the user: book title, author, N chapters parsed, briefs generated, syntheses generated (all flagged `synthesis_has_notes: false`), full folder path. Recommend: "Start with chapter 1. After each chapter, fill `## ✍️ My notes` then re-run `/reading-lens:synthesize N` to upgrade that chapter's synthesis."
 
 ### `/reading-lens:brief <N>`
 
@@ -151,11 +151,11 @@ Before writing any file, check if it already exists. Never overwrite silently. S
 ### `/reading-lens:synthesize <N>`
 
 1. **Resolve current book.** Same as `:brief`.
-2. **Load chapter N text** and read the user's content from `## My notes` section if present.
+2. **Load chapter N text** and read the user's content from `## ✍️ My notes` section if present.
 3. **Check for existing synthesis.** If `## Post-read synthesis` is filled:
-   - If frontmatter says `synthesis_has_notes: false` AND the user has written real content under `## My notes` (more than just the placeholder `*(take your notes...)*`), offer a notes-aware upgrade: "Current synthesis was generated at setup from chapter text only. You've since written notes — upgrade the synthesis to weave them in? (y/n)". On yes: overwrite the synthesis, remove the setup `> [!info]` callout, set `synthesis_has_notes: true`, regenerate using notes.
+   - If frontmatter says `synthesis_has_notes: false` AND the user has written real content under `## ✍️ My notes` (more than just the placeholder `*(take your notes...)*`), offer a notes-aware upgrade: "Current synthesis was generated at setup from chapter text only. You've since written notes — upgrade the synthesis to weave them in? (y/n)". On yes: overwrite the synthesis, remove the setup `> [!info]` callout, set `synthesis_has_notes: true`, regenerate using notes.
    - Otherwise, run the standard overwrite flow (keep/overwrite/append).
-4. **Generate synthesis.** USE EXTENDED THINKING. If `## My notes` has real content, reference it ("you noted X — this connects to..."). Produce the **Post-read Synthesis** matching the template below.
+4. **Generate synthesis.** USE EXTENDED THINKING. If `## ✍️ My notes` has real content, reference it ("you noted X — this connects to..."). Produce the **Post-read Synthesis** matching the template below.
 5. **Write.** Replace the content under `## Post-read synthesis`. Update frontmatter: `synthesis_generated: <ISO-date>`, `synthesis_has_notes: <true if notes were used, else false>`, `status: synthesized`.
 6. **Report.** Print a 3-line summary + flashcard count + path + whether this was a notes-aware generation.
 
@@ -280,9 +280,13 @@ tags: [chapter, reading-lens]
 
 *(run `/reading-lens:brief {N}` before reading)*
 
-## My notes
+---
+
+## ✍️ My notes
 
 *(take your notes here while reading — this section is never overwritten by the skill)*
+
+---
 
 ## Post-read synthesis
 
@@ -355,7 +359,7 @@ Book analysis is important — these rules are not optional:
 - **Contrarian takes must bite.** "Some readers might disagree" is not a contrarian take. Name the specific claim and say why it's wrong, overstated, or incomplete. This is where the skill earns its keep.
 - **Actionable experiments must fit a small startup.** Not "hire a data science team" — "add an event to track X in the existing analytics for Y feature, run for 2 weeks, compare to the Z cohort."
 - **Never pretend to know what you don't.** If the chapter text is thin or the topic is outside your confidence, say so in-line rather than fabricating.
-- **Respect the user's notes.** Never modify `## My notes`. When generating synthesis, read it and weave its content in — the reader's own framing is data.
+- **Respect the user's notes.** Never modify `## ✍️ My notes`. When generating synthesis, read it and weave its content in — the reader's own framing is data.
 - **Never delete files.** Ever. When in doubt, ask.
 - **Ask before overwriting.** Every regeneration is a deliberate choice, confirmed by the user.
 
