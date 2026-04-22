@@ -3,11 +3,11 @@
 # Edit BEFORE first use. Paths are absolute.
 
 # Where your Obsidian vault lives on disk.
-vault_path: /path/to/your/obsidian/vault   # EDIT THIS
+vault_path: /Users/mehmetsemihbabacan/dev/brain
 
 # Subfolder inside the vault where book notes go.
-# Default: Read/  →  your books will live at {vault_path}/Read/{Book Name (Author)}/
-books_folder: Read
+# Default: Reads/  →  your books will live at {vault_path}/Reads/{Book Name (Author)}/
+books_folder: Reads
 
 # -----------------------------------------------------------------------------
 # GLOBAL LENSES

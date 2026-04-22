@@ -36,7 +36,7 @@ Global settings live in `{SKILL_DIR}/config.yaml`. On first use, verify `vault_p
 
 Config fields:
 - `vault_path` — absolute path to the Obsidian vault (required)
-- `books_folder` — subfolder name (default `Read`)
+- `books_folder` — subfolder name (default `Reads`)
 - `global_lenses` — list of `{role, interests}` objects
 - `notion_parent_url` — optional, for `:to-notion`
 
