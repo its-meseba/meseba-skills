@@ -20,7 +20,7 @@ Reading nonfiction passively leaks most of its value. This skill pre-frames each
 
 | Command | Purpose |
 |---------|---------|
-| `/reading-lens:setup <epub-path>` | Parse EPUB, resolve lens choice with the user, create book folder, generate `0. General.md` and chapter stubs |
+| `/reading-lens:setup <epub-path>` | Parse EPUB, resolve lenses, create book folder, generate `0. General.md`, AND generate pre-read briefs + post-read syntheses for every chapter |
 | `/reading-lens:brief <N>` | Generate pre-read brief for chapter N (before reading) |
 | `/reading-lens:synthesize <N>` | Generate post-read synthesis for chapter N (after reading) |
 | `/reading-lens:overview-redo` | Regenerate `0. General.md` for the current book (lenses preserved) |
@@ -127,8 +127,17 @@ Before writing any file, check if it already exists. Never overwrite silently. S
 6. **Resolve lenses.** Run the Lens Selection Flow above.
 7. **Create folder + cache.** Create the book folder. Save parsed EPUB JSON to `{SKILL_DIR}/.cache/{book-folder-name}.json` for fast re-use by `:brief` and `:synthesize`.
 8. **Generate `0. General.md`.** Use extended thinking. Source material: title, author, TOC (all chapter titles in order), and sample text (first 6000 chars of chapter 1 + first 6000 chars of chapter 2). Fill the **Book Overview Template** below.
-9. **Create chapter stubs.** For each chapter, write a file with frontmatter + the three empty section headers (Pre-read brief, My notes, Post-read synthesis). Do NOT generate briefs or syntheses in setup — those come from `:brief` and `:synthesize`.
-10. **Report.** Tell the user: book title, author, N chapters parsed, full folder path, and suggest next step: `/reading-lens:brief 1`.
+9. **Create chapter stubs.** For each chapter, write a file with frontmatter + the three empty section headers (Pre-read brief, My notes, Post-read synthesis). Include `synthesis_has_notes: false` in the frontmatter.
+10. **Warn the user about duration.** Print: "Generating pre-read briefs + post-read syntheses for all {N} chapters. This uses Opus extended thinking for each chapter and will take roughly {N}–{N*2} minutes. Syntheses are generated WITHOUT your reading notes (you haven't read yet) — after you read a chapter and take notes in `## My notes`, re-run `/reading-lens:synthesize <N>` to upgrade that chapter's synthesis with your framing." Do not block on a confirmation — proceed.
+11. **Generate pre-read briefs for every chapter.** Iterate N = 1..chapters. For each N, run the `:brief N` workflow inline (steps 2–6 of the brief workflow) using the cached EPUB JSON. After each write, update the chapter file's frontmatter: `brief_generated: <ISO-date>`, `status: briefed`.
+12. **Generate post-read syntheses for every chapter.** Iterate N = 1..chapters. For each N, run the `:synthesize N` workflow inline with one variation: since `## My notes` is empty, do NOT fabricate user-note references. Produce the synthesis from chapter text + book lenses only. After writing, update frontmatter: `synthesis_generated: <ISO-date>`, `synthesis_has_notes: false`, `status: synthesized`. Prepend this callout block to the `## Post-read synthesis` body, before the template output:
+
+    ```
+    > [!info] Generated at setup — no reader notes yet
+    > This synthesis was generated from chapter text only, before you read the chapter. After you read and take notes in `## My notes`, re-run `/reading-lens:synthesize {N}` to produce a notes-aware upgrade.
+    ```
+
+13. **Report.** Tell the user: book title, author, N chapters parsed, briefs generated, syntheses generated (all flagged `synthesis_has_notes: false`), full folder path. Recommend: "Start with chapter 1. After each chapter, fill `## My notes` then re-run `/reading-lens:synthesize N` to upgrade that chapter's synthesis."
 
 ### `/reading-lens:brief <N>`
 
@@ -143,10 +152,12 @@ Before writing any file, check if it already exists. Never overwrite silently. S
 
 1. **Resolve current book.** Same as `:brief`.
 2. **Load chapter N text** and read the user's content from `## My notes` section if present.
-3. **Check for existing synthesis.** If `## Post-read synthesis` is filled, run the overwrite flow.
-4. **Generate synthesis.** USE EXTENDED THINKING. Reference the user's notes where relevant ("you noted X — this connects to..."). Produce the **Post-read Synthesis** matching the template below.
-5. **Write.** Replace the content under `## Post-read synthesis`. Update frontmatter: `synthesis_generated: <ISO-date>`, `status: synthesized`.
-6. **Report.** Print a 3-line summary + flashcard count + path.
+3. **Check for existing synthesis.** If `## Post-read synthesis` is filled:
+   - If frontmatter says `synthesis_has_notes: false` AND the user has written real content under `## My notes` (more than just the placeholder `*(take your notes...)*`), offer a notes-aware upgrade: "Current synthesis was generated at setup from chapter text only. You've since written notes — upgrade the synthesis to weave them in? (y/n)". On yes: overwrite the synthesis, remove the setup `> [!info]` callout, set `synthesis_has_notes: true`, regenerate using notes.
+   - Otherwise, run the standard overwrite flow (keep/overwrite/append).
+4. **Generate synthesis.** USE EXTENDED THINKING. If `## My notes` has real content, reference it ("you noted X — this connects to..."). Produce the **Post-read Synthesis** matching the template below.
+5. **Write.** Replace the content under `## Post-read synthesis`. Update frontmatter: `synthesis_generated: <ISO-date>`, `synthesis_has_notes: <true if notes were used, else false>`, `status: synthesized`.
+6. **Report.** Print a 3-line summary + flashcard count + path + whether this was a notes-aware generation.
 
 ### `/reading-lens:overview-redo`
 
@@ -259,6 +270,7 @@ word_count: {wc}
 status: unread
 brief_generated: null
 synthesis_generated: null
+synthesis_has_notes: false
 tags: [chapter, reading-lens]
 ---
 
@@ -374,7 +386,7 @@ Active-reading scaffolding for nonfiction books. Parses an EPUB → generates a 
 
 | Command | What it does |
 |---------|-------------|
-| `/reading-lens:setup <epub-path>` | Start a new book: parse EPUB, choose lenses, generate overview + stubs |
+| `/reading-lens:setup <epub-path>` | Start a new book: parse EPUB, choose lenses, generate overview, plus pre-read briefs + post-read syntheses for every chapter |
 | `/reading-lens:brief <N>` | Generate pre-read brief for chapter N |
 | `/reading-lens:synthesize <N>` | Generate post-read synthesis for chapter N |
 | `/reading-lens:overview-redo` | Regenerate `0. General.md` for the current book |
