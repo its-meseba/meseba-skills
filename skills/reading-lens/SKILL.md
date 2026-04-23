@@ -127,14 +127,19 @@ Before writing any file, check if it already exists. Never overwrite silently. S
 6. **Resolve lenses.** Run the Lens Selection Flow above.
 7. **Detect language for this book.** Check the user's setup invocation message for a language directive (e.g., "do it in Turkish", "yap bunu Türkçe", "auf Deutsch"). If detected, set `language: <code>` for this book (e.g., `tr`, `de`). Default: `en`. Confirm the detected language back to the user before proceeding: *"I'll generate this book's analysis in {Turkish}. Confirm?"* Wait for confirmation, then continue.
 8. **Create folder + cache.** Create the book folder. Save parsed EPUB JSON to `{SKILL_DIR}/.cache/{book-folder-name}.json` for fast re-use by `:brief` and `:synthesize`.
-9. **Generate `0. General.md`.** Use extended thinking. Source material: title, author, TOC (all chapter titles in order), and sample text (first 6000 chars of chapter 1 + first 6000 chars of chapter 2). Fill the **Book Overview Template** below.
+9. **Generate `0. General.md` AND extract book-level context for subagents.** Use extended thinking. Source material: title, author, TOC (all chapter titles in order), and sample text (first 6000 chars of chapter 1 + first 6000 chars of chapter 2). Fill the **Book Overview Template** below. Before returning, hold onto three transportable artifacts for step 12 to hand to subagents:
+    - **Book thesis** — the core argument in one sentence
+    - **Author-voice register** — 2–3 sentences characterizing the author's voice (see close-reading extraction step 4)
+    - **Frozen lens list** — as already resolved in step 6
 10. **Create chapter stubs.** For each chapter, write a file with frontmatter + the three empty section headers (Pre-read brief, My notes, Post-read synthesis). Include `synthesis_has_notes: false` in the frontmatter.
-11. **Warn the user about duration.** Print: "Generating pre-read briefs + post-read syntheses for all {N} chapters. This uses Opus extended thinking for each chapter and will take roughly {N}–{N*2} minutes. Syntheses are generated WITHOUT your reading notes (you haven't read yet) — after you read a chapter and take notes in `## ✍️ My notes`, re-run `/reading-lens:synthesize <N>` to upgrade that chapter's synthesis with your framing." Do not block on a confirmation — proceed.
-12. **Generate pre-read briefs AND post-read syntheses for all chapters — in parallel via subagents.** Use Claude Code's `Task` tool to dispatch multiple subagents concurrently. For a book of N chapters, batch the chapters across 4–8 subagents (e.g., 32 chapters → 8 subagents handling 4 chapters each; 16 chapters → 4 subagents handling 4 chapters each; <8 chapters → one subagent). Each subagent receives, in its prompt:
+11. **Warn the user about duration.** Print: "Generating pre-read briefs + post-read syntheses for all {N} chapters in parallel via subagents. This typically takes 5–15 minutes — longer for books with very long chapters or many chapters. Syntheses are generated WITHOUT your reading notes (you haven't read yet) — after you read a chapter and take notes in `## ✍️ My notes`, re-run `/reading-lens:synthesize <N>` to upgrade that chapter's synthesis with your framing." Do not block on a confirmation — proceed.
+12. **Generate pre-read briefs AND post-read syntheses for all chapters — in parallel via subagents.** Use Claude Code's `Task` tool to dispatch multiple subagents concurrently. **Batching rule:** aim for each subagent to receive no more than ~100,000 characters of chapter text total (to stay well under subagent context limits). A reasonable default: 4–8 subagents for a 32-chapter book (e.g., 32 chapters → 8 subagents handling 4 chapters each; 16 chapters → 4 subagents handling 4 chapters each; <8 chapters → one subagent). If the book has unusually long chapters (>6k words), drop to 2–3 chapters per subagent. Each subagent receives, in its prompt:
 
     - Its assigned chapters' titles, numbers, and full text (inline, pulled from the cached EPUB JSON)
-    - The book's extracted author-voice register from step 8
-    - The book's thesis and the frozen lens list from step 6
+    - The book's **author-voice register** extracted in step 9
+    - The book's **thesis** extracted in step 9
+    - The **frozen lens list** from step 6
+    - The book's `language` (from step 7) — subagent generates output in this language
     - The full **Pre-read Brief** and **Post-read Synthesis** templates from the Templates section above
     - The **Close-Reading Extraction Discipline** instructions
     - A direct write mandate — each subagent writes the completed brief and synthesis straight into the corresponding chapter file using the Edit tool
@@ -155,7 +160,7 @@ Before writing any file, check if it already exists. Never overwrite silently. S
 ### `/reading-lens:brief <N>`
 
 1. **Resolve current book.** Find the most recently modified `0. General.md` under `{vault_path}/{books_folder}/`. If multiple books have been touched recently, ask which one.
-2. **Read language from `0. General.md` frontmatter.** Generate output in that language. Preserve author-voice register across translation.
+2. **Read language from `0. General.md` frontmatter.** Generate output in that language. Preserve author-voice register across translation. **Fallback:** if the `language:` field is missing (pre-change book), default to `en` and proceed — don't prompt the user unless they asked for a language switch in their invocation.
 3. **Load chapter N.** Read cached EPUB JSON from `{SKILL_DIR}/.cache/`. If missing, tell the user to run `:setup` again.
 4. **Check for existing brief.** If `## Pre-read brief` in the chapter file already has content, run the overwrite flow.
 5. **Generate brief.** Using the chapter text (truncate to 40000 chars if longer) and the book's per-book lenses (from `0. General.md` frontmatter), produce the **Pre-read Brief** matching the template below.
@@ -165,7 +170,7 @@ Before writing any file, check if it already exists. Never overwrite silently. S
 ### `/reading-lens:synthesize <N>`
 
 1. **Resolve current book.** Same as `:brief`.
-2. **Read language from `0. General.md` frontmatter.** Generate output in that language. Preserve author-voice register across translation.
+2. **Read language from `0. General.md` frontmatter.** Generate output in that language. Preserve author-voice register across translation. **Fallback:** if the `language:` field is missing (pre-change book), default to `en` and proceed.
 3. **Load chapter N text** and read the user's content from `## ✍️ My notes` section if present.
 4. **Check for existing synthesis.** If `## Post-read synthesis` is filled:
    - If frontmatter says `synthesis_has_notes: false` AND the user has written real content under `## ✍️ My notes` (more than just the placeholder `*(take your notes...)*`), offer a notes-aware upgrade: "Current synthesis was generated at setup from chapter text only. You've since written notes — upgrade the synthesis to weave them in? (y/n)". On yes: overwrite the synthesis, remove the setup `> [!info]` callout, set `synthesis_has_notes: true`, regenerate using notes.
@@ -177,7 +182,7 @@ Before writing any file, check if it already exists. Never overwrite silently. S
 ### `/reading-lens:overview-redo`
 
 1. Resolve current book.
-2. **Detect language override.** If the user's invocation includes a new language directive, update the `language:` field in frontmatter. Otherwise preserve the existing value.
+2. **Detect language override.** If the user's invocation includes a new language directive, update the `language:` field in frontmatter. Otherwise preserve the existing value. **If the field is missing entirely** (pre-change book), insert `language: en` as part of the regenerated frontmatter unless a new directive says otherwise.
 3. Run overwrite flow for `0. General.md`.
 4. Preserve existing per-book lenses (from current frontmatter).
 5. Use extended thinking. Regenerate the overview with the same source material as setup (TOC + sample from first two chapters).
