@@ -1,0 +1,71 @@
+# {{USER_NAME}} — Blog Categories (≤5)
+
+> Synthesized {{DATE}} from {{N}} parallel Opus-1M research agents covering {{CORPUS_SUMMARY}}.
+> The ≤5 categories below describe a **professional approach**, not a product catalog — product, company, and codename references are intentionally omitted throughout.
+> Evidence references: Agent A (...), Agent B (...), Agent C (...), Agent D (...), Agent E (...). Raw agent files remain in this directory for deeper evidence.
+
+---
+
+## How the ≤5 categories were chosen
+
+[2-3 sentences explaining the clustering dimensions that emerged — audience × nature, or problem type × lifecycle stage, etc. Make this honest about the shape of the corpus.]
+
+---
+
+## 1. [Thesis title — methodology-framed]
+
+**Who it's for:** [1-line audience tag]
+**The thread:** [1-sentence approach statement]
+
+**Approach evidence:**
+- [bullet 1]
+- [bullet 2]
+- ... (5–10 bullets per category)
+
+**Draft post titles:**
+1. [methodology-first title]
+2. [methodology-first title]
+...
+(6–10 titles per category)
+
+---
+
+## 2. [Thesis title]
+
+...same structure...
+
+---
+
+## 3. [Thesis title]
+
+...
+
+---
+
+## 4. [Thesis title]
+
+...
+
+---
+
+## 5. [Thesis title]
+
+...
+
+---
+
+## Cross-category posts (threads tying multiple categories together)
+
+- **"[Title]"** — [1-line description + which categories it spans]
+
+---
+
+## What's NOT in these categories (intentional exclusions)
+
+[Data sources you skipped, corpora you didn't mine, work that doesn't fit — be honest about the gaps.]
+
+---
+
+## Next actions
+
+[Which category to write first, highest immediate reach, optional follow-ups.]

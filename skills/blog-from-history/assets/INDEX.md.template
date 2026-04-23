@@ -1,0 +1,24 @@
+# Blog Research — {{USER_NAME}}'s Work Inventory
+
+**Goal:** Extract professional accomplishments from Claude Code session history and Claude Desktop artifacts, so they can be turned into blog posts organized into ≤5 methodology categories.
+
+**Date of research:** {{DATE}}
+
+---
+
+## Sources under analysis
+
+{{CORPUS_SIZES_TABLE}}
+
+## Agent assignments (parallel, Opus 4.7 1M context)
+
+{{AGENT_ASSIGNMENTS_TABLE}}
+
+## Final synthesis
+
+- `BLOG-CATEGORIES.md` — ≤5 methodology-framed categories with supporting evidence and draft blog-post titles (populated after all research agents return)
+- `essays/category-N-<slug>.md` — long-form first-person essays, one per category (populated after Wave 2)
+
+## Denylist
+
+See `.denylist.txt` — user-provided product / company / codename list. Enforced by `scripts/verify_denylist.py` at multiple checkpoints.
