@@ -62,6 +62,101 @@ Views → ViewModels → AnalyticsRouter → [Firebase, PostHog, Meta, AppsFlyer
 
 **Graceful fallbacks:** When API keys are placeholders, SDKs auto-disable via guard checks in `SDKKeys`. No crashes, no error UI — just silent no-ops with DEBUG console warnings.
 
+## Plan Execution & Build Cadence
+
+**Scope:** Applies to every multi-task iOS/Android plan executed via `superpowers:subagent-driven-development`, `/shipyard:*` commands, or any session that's about to type `xcodebuild`. **This section overrides the generic "test after each step" cadence from `superpowers:writing-plans` / `superpowers:test-driven-development`** — those skills assume fast feedback loops; mobile native builds don't have one.
+
+### Why a section on builds lives inside shipyard
+
+Native iOS verification is the single most expensive action in the developer loop — a cold `xcodebuild test` on a real SDK-integrated app (Firebase + Adapty + PostHog + GRDB + Adhan) is 2–5 minutes. If you apply the generic "red→green→refactor, run tests after each change" pattern, a 3-file edit becomes a 20-minute session for zero extra signal. The rules here are cost-aware defaults.
+
+### When to batch vs. keep solo
+
+| Task shape | Strategy |
+|------------|----------|
+| Mechanical UI screens with concrete spec code (independent views, components, placeholder wiring) | Batch — one implementer, one combined review |
+| Business logic (ViewModel methods, state machines, service contracts) | Solo — two-stage spec + quality review |
+| Routing / activation forks / deep links | Solo — two-stage review |
+| Cross-cutting analytics wiring | Solo — two-stage review |
+| Localization strings | Direct edit; no review loop |
+| Single-file paste-verbatim edits from a plan | Direct edit in main session; no subagent at all |
+| Manual smoke / device walkthrough | User-driven; never dispatch |
+| Final batched commit | Main session; never dispatch |
+
+### Reviewer model tiering
+
+| Model | Use for | Examples |
+|-------|---------|----------|
+| **Haiku** | Layout, naming, imports, glass usage, switch exhaustiveness, analytics key presence | Confirming `.glassEffect()` on cards, confirming a placeholder view exists per enum case |
+| **Sonnet** | Pattern conformance, moderate multi-file coherence | Verifying ServiceContainer usage, reducer case coverage |
+| **Opus** | State machine correctness, async safety, spec reconciliation | Reviewing `OnboardingVM.commit(choice:)` or activation-fork routing |
+
+**Default:** Haiku for mechanical reviews, Opus for logic/routing/analytics reviews.
+
+### Subagent-vs-direct-edit break-even
+
+Before dispatching any subagent, ask: *is the edit mechanical enough that a single tool call in the main session would be faster and clearer?* A Haiku subagent dispatching on a "paste 100 lines into one file" task has routinely taken 6–8 minutes (12+ tool-use retries, redundant self-verification) when the main session would have done it in under a minute. Dispatch a subagent when work exceeds ~4 independent tool calls, when the implementer needs to iterate against build/test output, or when you want to isolate context from the main session. Do the edit inline otherwise.
+
+### Reconciliation before dispatch
+
+Plans drift from the codebase between authoring and execution — verify mock service constructors, VM init parameter order, repository method names, `@testable import` module name, and analytics key properties before briefing the implementer. A 2-minute reconciliation prevents a 30-minute failed implementation.
+
+### Commit discipline
+
+Implementer subagents must NOT `git add` or `git commit` per task during a multi-task plan. One batched commit (or a small handful of logical commits) at plan end from the main session. State this explicitly in every implementer prompt — they default to committing per task otherwise.
+
+### Verification cadence — the cost-aware iOS loop
+
+**Run `xcodebuild ... test` at the END of a batch, not per task.** Test-per-task inflates runtime 5–10× without adding signal when tasks share no logic.
+
+**Build-trigger checklist — only rebuild when one of these is true:**
+- `pbxproj` regenerated (new files added via xcodegen)
+- Shared types / protocols changed (module surface evolved)
+- A logic task extended an existing test suite
+- You crossed a `@MainActor` / concurrency boundary you're unsure about
+- The final verification pass at the end of the batch
+
+**Do NOT rebuild after:** pasting verbatim code inside an existing file, adding string-catalog entries, editing comments/whitespace/imports that don't change the module surface, or changing literal values inside an already-typed expression.
+
+### xcodebuild speed flags — always use these
+
+```bash
+export BOOTED_UDID=$(xcrun simctl list devices booted | awk -F'[()]' '/Booted/{print $2; exit}')
+[ -z "$BOOTED_UDID" ] && xcrun simctl boot "iPhone 15" && \
+  BOOTED_UDID=$(xcrun simctl list devices | awk -F'[()]' '/iPhone 15 .*Booted/{print $2; exit}')
+
+xcodebuild test \
+  -project <Project>.xcodeproj \
+  -scheme <Scheme> \
+  -destination "platform=iOS Simulator,id=$BOOTED_UDID" \
+  -derivedDataPath .build-xcode \
+  -skipPackagePluginValidation \
+  -skipMacroValidation \
+  -quiet \
+  2>&1 | tail -40
+```
+
+| Flag | Why | Savings |
+|------|-----|---------|
+| `-derivedDataPath .build-xcode` | Pin a per-repo cache so runs share compiled modules | 3–5 min → 30–60s on warm runs |
+| `-destination "...id=$BOOTED_UDID"` | Reuse an already-booted simulator instead of respawning | 30–60s per run |
+| `-skipPackagePluginValidation` | Skip first-run interactive SPM plugin prompt | 10–20s |
+| `-skipMacroValidation` | Same, for Swift macros | 10–20s |
+| `-disableAutomaticPackageResolution` (after first run) | Skip SPM freshness check when Package.resolved hasn't changed | 10–30s |
+| `-quiet` + `2>&1 | tail -40` | Keep stdout small so only the summary enters context | context budget |
+
+**Never mix destinations.** Using both `generic/platform=iOS Simulator` (build-only) and `platform=iOS Simulator,name=iPhone 15` (tests) in the same session busts the DerivedData cache and doubles total time.
+
+### xcodegen gotchas
+
+- **Always prefix in sandboxed shells:** `USER=$(whoami) LOGNAME=$(whoami) xcodegen generate`.
+- **New source files need `xcodegen generate`.** Most `project.yml` files use the default `group` type for `sources:` entries, so filesystem additions are NOT auto-picked-up — the file will be on disk but not a target member, and `@testable import <App>` will fail with `No such module`. Run `xcodegen generate` immediately after creating any new `.swift` file under a target folder.
+- **`type: folder` sources are the exception** — Xcode treats them as folder references that auto-pick-up. Used for resource folders (e.g. `Resources/EzkarImages`), rarely for source code.
+
+### Trust xcodebuild, not SourceKit
+
+The in-editor indexer (SourceKit LSP in Cursor/VSCode, or pre-reindex Xcode) routinely shows `No such module 'Adhan'` / `No such module 'Testing'` immediately after `xcodegen generate` or a file add — these clear on their own within seconds to a minute. Do not rewrite code to make the LSP happy; run `xcodebuild` and believe it.
+
 ## Browser Automation (Playwright)
 
 When CLI/API doesn't cover a task (e.g., Adapty paywall visual builder), use Playwright MCP.
@@ -79,38 +174,6 @@ Pick the model based on how much reasoning the browser task requires:
 | **Opus** | Complex multi-step flows with branching decisions, error recovery, or ambiguous UI states. | Setting up a completely new dashboard with many unknown steps, recovering from auth failures mid-flow, cross-dashboard orchestration |
 
 **Default:** Start with Haiku. If the task requires judgment calls (which template to pick, how to interpret UI), use Sonnet. Reserve Opus for flows that repeatedly fail or require deep reasoning about the UI state.
-
-### Plan Execution Subagent Pacing
-
-When executing a multi-task implementation plan (e.g., a shipyard-generated or superpowers plan), match the dispatch pattern and review model to each task's risk profile. This protects the main context from subagent sprawl while keeping review rigor where it matters.
-
-**Batch vs. solo:**
-
-| Task shape | Strategy |
-|------------|----------|
-| Mechanical UI screens with concrete spec code (independent views, components, placeholder wiring) | Batch — one implementer, one combined review |
-| Business logic (ViewModel methods, state machines, service contracts) | Solo — two-stage spec + quality review |
-| Routing / activation forks / deep links | Solo — two-stage review |
-| Cross-cutting analytics wiring | Solo — two-stage review |
-| Localization strings | Direct edit; no review loop |
-| Manual smoke / device walkthrough | User-driven; never dispatch |
-| Final batched commit | Main session; never dispatch |
-
-**Reviewer model tiering:**
-
-| Model | Use for | Examples |
-|-------|---------|----------|
-| **Haiku** | Layout, naming, imports, glass usage, switch exhaustiveness, analytics key presence | Confirming `.glassEffect()` on cards, confirming a placeholder view exists per enum case |
-| **Sonnet** | Pattern conformance, moderate multi-file coherence | Verifying ServiceContainer usage, reducer case coverage |
-| **Opus** | State machine correctness, async safety, spec reconciliation | Reviewing `OnboardingVM.commit(choice:)` or activation-fork routing |
-
-**Default:** Haiku for mechanical reviews, Opus for logic/routing/analytics reviews.
-
-**Reconciliation before dispatch:** Plans drift from the codebase between authoring and execution — verify mock service constructors, VM init parameter order, repository method names, and analytics key properties before briefing the implementer. A 2-minute reconciliation prevents a 30-minute failed implementation.
-
-**Commit discipline:** Implementer subagents must NOT `git add` or `git commit` per task during a multi-task plan. One batched commit at plan end from the main session. State this explicitly in every implementer prompt.
-
-**Verification cadence:** Run build+test at the end of a batch, not per task — unless pbxproj regenerates, shared types change, or a logic task extends an existing test suite. Always prefix xcodegen in sandboxed shells: `USER=$(whoami) LOGNAME=$(whoami) xcodegen generate`. Treat xcodebuild as authoritative; ignore stale SourceKit LSP errors after pbxproj regeneration.
 
 ### Dispatching Playwright Subagents
 
