@@ -32,6 +32,25 @@ Adapt ALL SDK integration patterns to the detected platform:
 - **Flutter**: `pubspec.yaml` dependencies, Dart service classes, Provider/Riverpod
 - **React Native**: `package.json` dependencies, TypeScript service modules, hooks
 
+## Inner Skill: ios-simulator-skill
+
+For ALL iOS simulator, build, test, and UI automation work, delegate to
+the `ios-simulator-skill` (installed at `~/.claude-shared/skills/ios-simulator-skill/`).
+It complements the SDK Registry below — SDK integration is shipyard's job,
+build/test/simulator/UI automation is ios-simulator-skill's job.
+
+It provides 22 Python scripts covering:
+- Build + xcresult parsing with build cache (`build_and_test.py`)
+- Simulator lifecycle (`simctl_boot.py`, `simctl_shutdown.py`, `simctl_create.py`, `simctl_delete.py`, `simctl_erase.py`, `sim_health_check.sh`)
+- Semantic UI navigation via accessibility tree (`screen_mapper.py`, `navigator.py`, `gesture.py`, `keyboard.py`, `app_launcher.py`) — ~10 tokens vs 1.6K-6K for screenshots
+- Accessibility audits, visual diffs, app state capture (`accessibility_audit.py`, `visual_diff.py`, `test_recorder.py`, `app_state_capture.py`, `model_inspector.py`)
+- Push notifications, privacy permissions, clipboard, status bar overrides (`push_notification.py`, `privacy_manager.py`, `clipboard.py`, `status_bar.py`)
+- Real-time log streaming with severity filtering (`log_monitor.py`)
+
+Use these scripts instead of raw `xcrun simctl` / `xcodebuild` whenever
+possible — they output structured JSON via `--json`, cache build results per-project,
+and survive UI changes via semantic targeting on the accessibility tree.
+
 ## SDK Registry
 
 | SDK | Purpose | CLI | MCP | Install Skill |
