@@ -505,7 +505,7 @@ Detects the project platform and installs all relevant Claude Code skills via `g
    **For iOS projects, create these files:**
    - `ai-rules/rule-loading.md` — index of all rule files with loading triggers and keywords (MUST list `app-store.md` with triggers: "submit", "release", "screenshot", "metadata", "ASC", "App Store Connect", "localization", "review notes")
    - `ai-rules/general.md` — core Swift engineering rules (**trigger-loaded on first Swift code read/write**, NOT via `@` in CLAUDE.md): progressive architecture, error handling, dependency injection, localization, quality gates, anti-patterns
-   - `ai-rules/view.md` — SwiftUI view rules: Liquid Glass API patterns, modifier order, design system tokens, animation patterns (staggered reveal, celebration, content transitions), reusable components list
+   - `ai-rules/view.md` — SwiftUI view rules: Liquid Glass API patterns, modifier order, design system tokens, animation patterns (staggered reveal, celebration, content transitions), reusable components list, **`SINGLE_COMPONENT_PER_STATE`** (never render two views for the same piece of state — pick the most-contextual one and remove duplicates), **`ONE_TRUTH_PER_AFFORDANCE`** (an action lives in exactly one place per screen)
    - `ai-rules/view-model.md` — ViewModel rules: @Observable pattern, computed derived state, async data loading, String(localized:), state ownership
    - `ai-rules/services.md` — services/SDK rules: AnalyticsRouter pattern, graceful SDK fallbacks, revenue event formatting, HealthKit/FamilyControls patterns
    - `ai-rules/testing.md` — testing rules: test behavior not implementation, mock dependency injection, focus areas, test structure
